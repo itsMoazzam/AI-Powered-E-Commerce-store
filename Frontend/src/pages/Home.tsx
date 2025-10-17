@@ -33,8 +33,8 @@ export default function Home() {
 
     return (
         <div className="space-y-10">
-            <HeroBanner />
             <CategoryGrid />
+            <HeroBanner />
             <ProductGrid items={items} loading={loading} />
         </div>
     )

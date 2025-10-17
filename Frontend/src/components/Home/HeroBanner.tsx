@@ -1,117 +1,90 @@
 import { Link } from "react-router-dom"
-import { motion } from "framer-motion"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useState, useEffect } from "react"
 
 const slides = [
     {
         id: 1,
-        title: "Shop the Latest Trends",
-        subtitle: "Discover exclusive deals and personalized picks",
-        cta: "Start Shopping",
+        title: "Discover the Latest Trends",
+        subtitle: "Shop smart. Look sharp.",
+        cta: "Shop Now",
         link: "/shop",
-        image: "https://i.ibb.co/27BvNmms/cropped-circle-image.png",
+        image: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=1600&q=80",
     },
     {
         id: 2,
-        title: "New Arrivals",
-        subtitle: "Fresh styles curated just for you",
-        cta: "Explore Now",
+        title: "New Arrivals Just In",
+        subtitle: "Fresh styles for every season.",
+        cta: "Explore",
         link: "/new-arrivals",
-        image: "https://i.ibb.co/27BvNmms/cropped-circle-image.png",
+        image: "https://images.unsplash.com/photo-1521335629791-ce4aec67dd53?auto=format&fit=crop&w=1600&q=80",
     },
     {
         id: 3,
-        title: "Exclusive Deals",
-        subtitle: "Save big with our seasonal discounts",
-        cta: "View Offers",
-        link: "/deals",
-        image: "https://i.ibb.co/27BvNmms/cropped-circle-image.png",
+        title: "Exclusive Offers Await",
+        subtitle: "Upgrade your look at unbeatable prices.",
+        cta: "See Deals",
+        link: "/offers",
+        image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1600&q=80",
     },
 ]
 
-const HeroBanner = () => {
+export default function HeroBanner() {
     const [current, setCurrent] = useState(0)
 
-    // Auto-play every 5s
     useEffect(() => {
-        const interval = setInterval(() => {
+        const timer = setInterval(() => {
             setCurrent((prev) => (prev + 1) % slides.length)
-        }, 5000)
-        return () => clearInterval(interval)
+        }, 6000)
+        return () => clearInterval(timer)
     }, [])
 
     const nextSlide = () => setCurrent((prev) => (prev + 1) % slides.length)
-    const prevSlide = () =>
-        setCurrent((prev) => (prev - 1 + slides.length) % slides.length)
+    const prevSlide = () => setCurrent((prev) => (prev - 1 + slides.length) % slides.length)
 
     return (
-        <div className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden rounded-2xl">
+        <div className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden rounded-3xl shadow-lg">
             {slides.map((slide, index) => (
-                <motion.div
+                <div
                     key={slide.id}
-                    className="absolute inset-0 w-full h-full"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: current === index ? 1 : 0 }}
-                    transition={{ duration: 0.8 }}
-                    style={{ pointerEvents: current === index ? "auto" : "none" }}
+                    className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${current === index ? "opacity-100" : "opacity-0"
+                        }`}
                 >
-                    {/* Background image */}
                     <img
                         src={slide.image}
                         alt={slide.title}
                         className="w-full h-full object-cover"
                     />
-                    {/* Gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
-                    {/* Content */}
-                    <div className="absolute inset-0 flex flex-col items-start justify-center px-8 md:px-20 text-white space-y-4">
-                        <motion.h1
-                            key={slide.title}
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            transition={{ delay: 0.2 }}
-                            className="text-3xl md:text-6xl font-bold max-w-xl"
-                        >
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent" />
+                    <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-20 text-white">
+                        <h1 className="text-4xl md:text-6xl font-bold leading-tight drop-shadow-lg">
                             {slide.title}
-                        </motion.h1>
-                        <motion.p
-                            key={slide.subtitle}
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            transition={{ delay: 0.4 }}
-                            className="text-lg md:text-2xl max-w-lg"
-                        >
+                        </h1>
+                        <p className="text-lg md:text-2xl mt-3 text-gray-200 max-w-xl">
                             {slide.subtitle}
-                        </motion.p>
-                        <motion.div
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            transition={{ delay: 0.6 }}
+                        </p>
+                        <Link
+                            to={slide.link}
+                            className="w-1/7 text-center mt-6 inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-xl shadow-md transition-all duration-300"
                         >
-                            <Link
-                                to={slide.link}
-                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg text-lg font-semibold transition"
-                            >
-                                {slide.cta}
-                            </Link>
-                        </motion.div>
+                            {slide.cta}
+                        </Link>
                     </div>
-                </motion.div>
+                </div>
             ))}
 
-            {/* Navigation Arrows */}
+            {/* Navigation */}
             <button
                 onClick={prevSlide}
-                className="absolute top-1/2 left-4 -translate-y-1/2 p-3 rounded-full bg-black/50 hover:bg-black/70 text-white"
+                className="absolute top-1/2 left-5 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-3"
             >
-                <ChevronLeft className="w-6 h-6" />
+                <ChevronLeft size={24} />
             </button>
             <button
                 onClick={nextSlide}
-                className="absolute top-1/2 right-4 -translate-y-1/2 p-3 rounded-full bg-black/50 hover:bg-black/70 text-white"
+                className="absolute top-1/2 right-5 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-3"
             >
-                <ChevronRight className="w-6 h-6" />
+                <ChevronRight size={24} />
             </button>
 
             {/* Dots */}
@@ -120,7 +93,7 @@ const HeroBanner = () => {
                     <button
                         key={i}
                         onClick={() => setCurrent(i)}
-                        className={`w-3 h-3 rounded-full transition ${i === current ? "bg-white" : "bg-white/50"
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${i === current ? "bg-indigo-500 scale-110" : "bg-white/60 hover:bg-white"
                             }`}
                     />
                 ))}
@@ -128,5 +101,3 @@ const HeroBanner = () => {
         </div>
     )
 }
-
-export default HeroBanner

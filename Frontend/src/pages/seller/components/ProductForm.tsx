@@ -1,80 +1,91 @@
-
-// FILE: src/pages/seller/components/ProductForm.tsx
 import { useState } from "react"
-// import api from "../../../lib/api"
+import api from "../../../lib/api"
+import { Upload, Loader2 } from "lucide-react"
 
-type Product = {
-    id: number;
-    title: string;
-    price: number | string;
-    thumbnail?: string;
-    model_3d?: string;
-};
-
-interface ProductFormProps {
-    onCreated: (product: Product) => void;
-}
-
-export default function ProductForm({ onCreated }: ProductFormProps) {
-    const [title, setTitle] = useState("")
-    const [price, setPrice] = useState<number | string>("")
+export default function ProductForm({ onCreated }: { onCreated: (p: any) => void }) {
+    const [form, setForm] = useState({ title: "", price: "", description: "" })
     const [image, setImage] = useState<File | null>(null)
-    const [model, setModel] = useState<File | null>(null)
+    const [model3d, setModel3d] = useState<File | null>(null)
     const [loading, setLoading] = useState(false)
 
-    async function create() {
-        if (!title || !price) return alert("Title and price required")
+    async function submit(e: React.FormEvent) {
+        e.preventDefault()
         setLoading(true)
-        const form = new FormData()
-        form.append('title', title)
-        form.append('price', String(price))
-        if (image) form.append('image', image)
-        if (model) form.append('model_3d', model)
+        const fd = new FormData()
+        Object.entries(form).forEach(([k, v]) => fd.append(k, v))
+        if (image) fd.append("thumbnail", image)
+        if (model3d) fd.append("model_3d", model3d)
 
         try {
-            // uncomment to use backend
-            // const { data } = await api.post('/api/seller/products/', form, { headers: { 'Content-Type': 'multipart/form-data' } })
-            // onCreated(data)
-
-            // Demo feedback
-            const demo = { id: Date.now(), title, price, thumbnail: image ? URL.createObjectURL(image) : undefined, model_3d: model ? model.name : undefined }
-            onCreated(demo)
-            setTitle("")
-            setPrice("")
+            const { data } = await api.post("/api/seller/products/", fd)
+            onCreated(data)
+            alert("✅ Product created successfully!")
+            setForm({ title: "", price: "", description: "" })
             setImage(null)
-            setModel(null)
-        } catch (e) {
-            console.error(e)
-            alert('Failed to create product')
+            setModel3d(null)
         } finally {
             setLoading(false)
         }
     }
 
     return (
-        <div className="card p-6 bg-white dark:bg-zinc-950 rounded-xl shadow">
-            <h3 className="text-lg font-semibold mb-3">Add New Product</h3>
-            <div className="grid gap-3">
-                <label className="text-sm">Title</label>
-                <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
-                <label className="text-sm">Price</label>
-                <input
-                    type="number"
-                    className="input"
-                    value={typeof price === "number" ? price : ""}
-                    onChange={(e) => setPrice(Number(e.target.value))}
-                />
-                <label className="text-sm">Image</label>
-                <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files?.[0] || null)} />
-                <label className="text-sm">3D Model (.glb)</label>
-                <input type="file" accept=".glb,.gltf" onChange={(e) => setModel(e.target.files?.[0] || null)} />
-                <div className="flex gap-2 mt-2">
-                    <button className="btn-primary" onClick={create} disabled={loading}>{loading ? 'Creating...' : 'Create'}</button>
-                    <button className="btn-outline" onClick={() => { setTitle(''); setPrice(''); setImage(null); setModel(null) }}>Reset</button>
+        <form
+            onSubmit={submit}
+            className="bg-white rounded-2xl p-6 shadow-sm space-y-4 max-w-xl"
+        >
+            <h3 className="text-lg font-semibold text-zinc-800">Add New Product</h3>
+
+            <input
+                type="text"
+                placeholder="Product title"
+                className="input"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                required
+            />
+            <input
+                type="number"
+                placeholder="Price"
+                className="input"
+                value={form.price}
+                onChange={(e) => setForm({ ...form, price: e.target.value })}
+                required
+            />
+            <textarea
+                placeholder="Description"
+                className="input"
+                rows={3}
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+            />
+
+            <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                    <label className="text-sm text-zinc-600">Thumbnail</label>
+                    <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setImage(e.target.files?.[0] || null)}
+                    />
+                </div>
+                <div>
+                    <label className="text-sm text-zinc-600">3D Model (.glb)</label>
+                    <input
+                        type="file"
+                        accept=".glb,.gltf"
+                        onChange={(e) => setModel3d(e.target.files?.[0] || null)}
+                    />
                 </div>
             </div>
-        </div>
+
+            <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full flex items-center justify-center gap-2"
+            >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload size={16} />}
+                {loading ? "Uploading..." : "Add Product"}
+            </button>
+        </form>
     )
 }
-
-
