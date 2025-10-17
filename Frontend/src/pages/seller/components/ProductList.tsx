@@ -1,86 +1,85 @@
+// src/pages/seller/components/ProductList.tsx
+import { useState } from "react"
+import { Trash2, Eye } from "lucide-react"
+import Product3DPreview from "./Product3DPreview"
+import api from "../../../lib/api"
 
-// FILE: src/pages/seller/components/ProductList.tsx
-import { Suspense } from "react"
-import { Canvas } from "@react-three/fiber"
-import { OrbitControls, Environment, useGLTF, Html } from "@react-three/drei"
+export default function ProductList({ products = [], onEdit, onDelete, refresh }: any) {
+    const [preview, setPreview] = useState<any | null>(null)
+    const [busyId, setBusyId] = useState<number | string | null>(null)
 
-function ModelPreview({ url }: { url: string }) {
-    // useGLTF must always be called unconditionally
-    const { scene } = useGLTF(url, true)
-    return <primitive object={scene} />
-}
+    async function removeProduct(id: number | string) {
+        if (!confirm("Delete this product? This action cannot be undone.")) return
+        try {
+            setBusyId(id)
+            // uncomment when backend ready:
+            // await api.delete(`/api/seller/products/${id}/`)
+            onDelete(id)
+        } catch (err) {
+            console.error("Delete failed", err)
+            alert("Delete failed")
+        } finally {
+            setBusyId(null)
+        }
+    }
 
-interface Product {
-    id: string | number
-    title: string
-    price: number
-    thumbnail?: string
-    image?: string
-    model_3d?: string
-}
-
-export default function ProductList({ products }: { products: Product[] }) {
     return (
-        <div className="grid lg:grid-cols-2 gap-6">
-            <div className="card p-6 bg-white dark:bg-zinc-950 rounded-xl shadow">
-                <h3 className="text-lg font-semibold mb-3">Your Products</h3>
-                <div className="space-y-3 max-h-[60vh] overflow-auto pr-2">
-                    {products.map((p: Product) => (
-                        <div key={p.id} className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800">
-                            <div className="flex items-center gap-3">
-                                <img src={p.thumbnail || p.image} className="w-16 h-16 rounded-md object-cover" />
-                                <div>
-                                    <div className="font-medium">{p.title}</div>
-                                    <div className="text-sm text-zinc-500">${p.price}</div>
-                                </div>
+        <section className="grid gap-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {products.map((p: any) => (
+                    <div key={p.id} className="bg-white rounded-2xl p-4 shadow-sm border border-zinc-100">
+                        <div className="relative">
+                            <img src={p.thumbnail || p.image} className="w-full h-44 object-cover rounded-md" />
+                            {p.model_3d && (
+                                <span className="absolute top-3 right-3 bg-indigo-600 text-white px-2 py-1 rounded-md text-xs">3D</span>
+                            )}
+                        </div>
+
+                        <div className="mt-3 flex items-start justify-between gap-3">
+                            <div>
+                                <div className="font-semibold text-zinc-900">{p.title}</div>
+                                <div className="text-sm text-zinc-500">${Number(p.price).toFixed(2)}</div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                {p.model_3d ? (
-                                    <div className="w-28 h-20 border rounded overflow-hidden">
-                                        <Canvas camera={{ position: [1, 1, 1.5], fov: 50 }}>
-                                            <ambientLight intensity={0.8} />
-                                            <Suspense fallback={<Html center>Loading 3D</Html>}>
-                                                <ModelPreview url={p.model_3d} />
-                                                <Environment preset="studio" />
-                                                <OrbitControls enablePan enableRotate enableZoom />
-                                            </Suspense>
-                                        </Canvas>
+
+                            <div className="flex flex-col items-end gap-2">
+                                <button
+                                    onClick={() => onEdit && onEdit(p)}
+                                    className="text-sm px-3 py-1 rounded-md border border-zinc-200 hover:bg-zinc-100"
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={() => removeProduct(p.id)}
+                                    className="text-sm px-3 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50"
+                                >
+                                    {busyId === p.id ? "Deleting..." : "Delete"}
+                                </button>
+                                {p.model_3d && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                        <button onClick={() => setPreview(p)} className="text-xs text-indigo-600 hover:underline flex items-center gap-1">
+                                            <Eye size={14} /> Preview 3D
+                                        </button>
                                     </div>
-                                ) : (
-                                    <div className="text-xs text-zinc-500">No 3D model</div>
                                 )}
                             </div>
                         </div>
-                    ))}
-                </div>
+                    </div>
+                ))}
             </div>
 
-            <div className="card p-6 bg-white dark:bg-zinc-950 rounded-xl shadow">
-                <h3 className="text-lg font-semibold mb-3">Performance & Quick Actions</h3>
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800">
-                        <div className="text-sm text-zinc-500">Total Views (30d)</div>
-                        <div className="text-xl font-semibold mt-1">12.4k</div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800">
-                        <div className="text-sm text-zinc-500">Orders (30d)</div>
-                        <div className="text-xl font-semibold mt-1">421</div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800">
-                        <div className="text-sm text-zinc-500">3D Products</div>
-                        <div className="text-xl font-semibold mt-1">{products.filter((p: Product) => p.model_3d).length}</div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800">
-                        <div className="text-sm text-zinc-500">Avg Revenue</div>
-                        <div className="text-xl font-semibold mt-1">$2,130</div>
+            {preview && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                    <div className="w-full max-w-4xl bg-white rounded-2xl overflow-hidden">
+                        <div className="p-4 flex items-center justify-between border-b">
+                            <div className="font-semibold">{preview.title} — 3D Preview</div>
+                            <button onClick={() => setPreview(null)} className="text-sm px-3 py-1">Close</button>
+                        </div>
+                        <div className="p-6">
+                            <Product3DPreview url={preview.model_3d} />
+                        </div>
                     </div>
                 </div>
-
-                <div className="mt-4 flex gap-2">
-                    <button className="btn-primary">Promote Product</button>
-                    <button className="btn-outline">Bulk Upload</button>
-                </div>
-            </div>
-        </div>
+            )}
+        </section>
     )
 }

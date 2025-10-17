@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import api from "../lib/api"
 import { Link } from "react-router-dom"
-import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react"
+import { Trash2, Plus, Minus, ShoppingBag, Truck, ShieldCheck } from "lucide-react"
 
 type CartItem = {
     id: number | string
@@ -16,7 +16,7 @@ export default function Cart() {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        ; (async () => {
+        (async () => {
             try {
                 const { data } = await api.get("/api/cart/")
                 setItems(data.items || [])
@@ -68,25 +68,32 @@ export default function Cart() {
         )
 
     return (
-        <div className="container mx-auto px-4 py-8 grid md:grid-cols-3 gap-8">
-            {/* Cart Items */}
-            <div className="md:col-span-2 bg-white rounded-2xl shadow p-6">
-                <h2 className="text-2xl font-semibold mb-4 text-zinc-800">Shopping Cart</h2>
+        <div className="container mx-auto px-4 py-10 grid md:grid-cols-3 gap-8">
+            {/* Cart Items Section */}
+            <div className="md:col-span-2 bg-white rounded-2xl shadow-md border border-zinc-100 p-6">
+                <h2 className="text-2xl font-semibold mb-4 text-gray-800">Shopping Cart</h2>
                 <div className="divide-y divide-zinc-200">
                     {items.map((it) => (
-                        <div key={it.id} className="py-4 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
+                        <div
+                            key={it.id}
+                            className="py-5 flex flex-col sm:flex-row items-center justify-between gap-4 hover:bg-gray-50 transition rounded-xl px-2"
+                        >
+                            {/* Product Info */}
+                            <div className="flex items-center gap-5 w-full sm:w-auto">
                                 <img
                                     src={it.thumbnail}
                                     alt={it.title}
-                                    className="w-20 h-20 rounded-xl object-cover shadow-sm border border-zinc-100"
+                                    className="w-24 h-24 rounded-xl object-cover border border-zinc-200 shadow-sm"
                                 />
                                 <div>
-                                    <div className="font-medium text-zinc-800">{it.title}</div>
-                                    <div className="text-sm text-zinc-500 mt-1">
+                                    <h3 className="font-medium text-gray-900 text-base line-clamp-2">
+                                        {it.title}
+                                    </h3>
+                                    <p className="text-sm text-green-600 mt-1">In Stock</p>
+                                    <p className="text-sm text-gray-500">
                                         ${it.price.toFixed(2)} each
-                                    </div>
-
+                                    </p>
+                                    {/* Quantity Controls */}
                                     <div className="flex items-center mt-2 gap-2">
                                         <button
                                             onClick={() => updateQty(it.id, it.qty - 1)}
@@ -94,7 +101,9 @@ export default function Cart() {
                                         >
                                             <Minus size={14} />
                                         </button>
-                                        <span className="px-3 text-zinc-700 font-medium">{it.qty}</span>
+                                        <span className="px-3 text-gray-800 font-semibold text-sm">
+                                            {it.qty}
+                                        </span>
                                         <button
                                             onClick={() => updateQty(it.id, it.qty + 1)}
                                             className="p-1 rounded-full border border-zinc-300 hover:bg-zinc-100"
@@ -105,13 +114,14 @@ export default function Cart() {
                                 </div>
                             </div>
 
-                            <div className="text-right">
-                                <div className="font-semibold text-zinc-800">
+                            {/* Price + Remove */}
+                            <div className="text-right w-full sm:w-auto">
+                                <div className="font-semibold text-lg text-gray-800">
                                     ${(it.price * it.qty).toFixed(2)}
                                 </div>
                                 <button
                                     onClick={() => removeItem(it.id)}
-                                    className="text-red-500 hover:text-red-600 text-sm mt-2 flex items-center gap-1"
+                                    className="text-red-500 hover:text-red-600 text-sm mt-2 flex items-center gap-1 justify-end"
                                 >
                                     <Trash2 size={14} /> Remove
                                 </button>
@@ -121,10 +131,11 @@ export default function Cart() {
                 </div>
             </div>
 
-            {/* Summary */}
-            <div className="bg-white rounded-2xl shadow p-6 h-fit sticky top-8">
-                <h3 className="text-xl font-semibold mb-4 text-zinc-800">Order Summary</h3>
-                <div className="space-y-2 text-zinc-700">
+            {/* Summary Sidebar */}
+            <div className="bg-white rounded-2xl shadow-md border border-zinc-100 p-6 h-fit sticky top-8">
+                <h3 className="text-xl font-semibold mb-4 text-gray-800">Order Summary</h3>
+
+                <div className="space-y-2 text-gray-700">
                     <div className="flex justify-between">
                         <span>Subtotal</span>
                         <span>${total.toFixed(2)}</span>
@@ -138,12 +149,25 @@ export default function Cart() {
                         <span>${total.toFixed(2)}</span>
                     </div>
                 </div>
+
                 <Link
                     to="/checkout"
                     className="block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg mt-6 py-2.5 font-medium transition"
                 >
                     Proceed to Checkout
                 </Link>
+
+                {/* Trust & Delivery Info */}
+                <div className="mt-6 text-sm text-gray-500 space-y-2 border-t border-zinc-200 pt-4">
+                    <div className="flex items-center gap-2">
+                        <Truck className="text-indigo-500 w-4 h-4" />
+                        <span>Free & Fast Delivery within 3–5 days</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <ShieldCheck className="text-indigo-500 w-4 h-4" />
+                        <span>Secure Checkout & Buyer Protection</span>
+                    </div>
+                </div>
             </div>
         </div>
     )

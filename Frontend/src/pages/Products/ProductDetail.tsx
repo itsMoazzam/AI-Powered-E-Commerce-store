@@ -1,92 +1,73 @@
-// src/pages/products/ProductDetail.tsx
-import { Suspense, useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
-// import api from "../../lib/api" // backend (commented)
-import { Canvas } from "@react-three/fiber"
-import { OrbitControls, Environment, useGLTF, Html } from "@react-three/drei"
-import { demoProducts } from "../../lib/demoProducts"
+import { Link } from "react-router-dom"
+import { motion } from "framer-motion"
+import { Star } from "lucide-react"
 
-// Reviews
-import ReviewList from "../../components/Reviews/ReviewList"
-import ReviewForm from "../../components/Reviews/ReviewForm"
-
-function Model({ url }: { url: string }) {
-    const { scene } = useGLTF(url, true)
-    return <primitive object={scene} />
+interface Product {
+    id: number
+    title: string
+    price: number
+    thumbnail: string
+    has3d?: boolean
+    rating?: number
+    discount?: number
 }
 
-export default function ProductDetail() {
-    const { id } = useParams()
-    const [product, setProduct] = useState<any>(null)
-
-    useEffect(() => {
-        // Future backend call:
-        // api.get(`/api/products/${id}/`).then(res => setProduct(res.data))
-
-        // For now, load demo product
-        const found = demoProducts.find((p) => p.id === Number(id))
-        setProduct(found || null)
-    }, [id])
-
-    if (!product) return <div>Loading…</div>
-
+export default function ProductCard({ product, index }: { product: Product; index: number }) {
     return (
-        <div className="space-y-10 p-6">
-            {/* --- Product details --- */}
-            <div className="grid lg:grid-cols-2 gap-6">
-                <div className="card p-2 min-h-[420px]">
-                    {product.model_3d ? (
-                        <Canvas camera={{ position: [1.2, 1, 1.2], fov: 50 }}>
-                            <ambientLight intensity={0.7} />
-                            <Suspense fallback={<Html center>Loading 3D…</Html>}>
-                                <Model url={product.model_3d} />
-                                <Environment preset="city" />
-                                <OrbitControls enablePan enableZoom enableRotate />
-                            </Suspense>
-                        </Canvas>
-                    ) : (
-                        <img
-                            src={product.image}
-                            alt={product.title}
-                            className="w-full h-[420px] object-cover rounded-xl"
-                        />
+        <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+            className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-100"
+        >
+            <Link to={`/product/${product.id}`}>
+                {/* Image */}
+                <div className="relative">
+                    <img
+                        src={product.thumbnail}
+                        alt={product.title}
+                        className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                    />
+                    {product.discount && (
+                        <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-md font-semibold">
+                            -{product.discount}%
+                        </span>
+                    )}
+                    {product.has3d && (
+                        <span className="absolute bottom-2 right-2 bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-md shadow">
+                            3D
+                        </span>
                     )}
                 </div>
 
-                <div className="space-y-4">
-                    <h1 className="text-2xl font-semibold">{product.title}</h1>
-                    <p className="text-zinc-600 dark:text-zinc-400">
-                        {product.description}
-                    </p>
-                    <div className="text-3xl font-bold">${Number(product.price).toFixed(2)}</div>
-                    <div className="flex gap-2">
-                        <button
-                            className="btn-primary"
-                            onClick={async () => {
-                                // await api.post("/api/cart/add/", { product: product.id, qty: 1 })
-                                alert("Added to cart (demo)")
-                            }}
-                        >
-                            Add to Cart
-                        </button>
-                        <button
-                            className="btn-outline"
-                            onClick={async () => {
-                                // await api.post("/api/wishlist/add/", { product: product.id })
-                                alert("Added to wishlist (demo)")
-                            }}
-                        >
-                            Wishlist
-                        </button>
+                {/* Info */}
+                <div className="p-4 space-y-1">
+                    <h3 className="font-semibold text-gray-900 line-clamp-1">{product.title}</h3>
+                    <div className="text-sm text-gray-600 flex items-center gap-2">
+                        <span className="text-indigo-600 font-medium">${product.price.toFixed(2)}</span>
                     </div>
-                </div>
-            </div>
 
-            {/* --- Reviews Section --- */}
-            <div className="space-y-6">
-                <ReviewForm productId={product.id} />
-                <ReviewList productId={product.id} />
-            </div>
-        </div>
+                    {/* Rating */}
+                    {product.rating && (
+                        <div className="flex items-center text-xs text-yellow-500 mt-1">
+                            {Array.from({ length: 5 }).map((_, idx) => (
+                                <Star
+                                    key={idx}
+                                    size={14}
+                                    fill={idx < Math.round(product.rating!) ? "currentColor" : "none"}
+                                />
+                            ))}
+                            <span className="ml-1 text-gray-500">{product.rating.toFixed(1)}</span>
+                        </div>
+                    )}
+
+                    {/* Add to Cart Button */}
+                    <button className="w-full bg-indigo-600 text-white text-sm font-medium py-2 rounded-lg mt-3 opacity-0 group-hover:opacity-100 transition-all hover:bg-indigo-700">
+                        Add to Cart
+                    </button>
+                </div>
+            </Link>
+        </motion.div>
     )
 }
