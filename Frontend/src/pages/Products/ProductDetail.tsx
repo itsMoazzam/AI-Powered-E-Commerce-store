@@ -10,7 +10,14 @@ interface Product {
     has3d?: boolean
     rating?: number
     discount?: number
+    videos?: ProductVideo[]
 }
+interface ProductVideo {
+    id: number;
+    video: string;
+    preview_image?: string | null;
+}
+
 
 export default function ProductCard({ product, index }: { product: Product; index: number }) {
     return (
@@ -40,6 +47,42 @@ export default function ProductCard({ product, index }: { product: Product; inde
                         </span>
                     )}
                 </div>
+                {/* --- Product Videos --- */}
+                {product.videos?.length > 0 && (
+                    <div className="mt-4 space-y-3">
+                        <h3 className="text-sm font-medium text-gray-700">Product Videos</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                            {product.videos.map((vid: ProductVideo, idx: number) => (
+                                <div key={idx} className="rounded-xl overflow-hidden shadow-sm bg-gray-100">
+                                    {vid.preview_image ? (
+                                        <div className="relative">
+                                            <img src={vid.preview_image} alt="Video preview" className="w-full h-48 object-cover" />
+                                            <button
+                                                onClick={() => {
+                                                    const videoEl = document.getElementById(`video-${idx}`) as HTMLVideoElement
+                                                    if (videoEl) videoEl.play()
+                                                }}
+                                                className="absolute inset-0 flex items-center justify-center bg-black/40 text-white text-lg font-bold rounded-xl"
+                                            >
+                                                ▶
+                                            </button>
+                                        </div>
+                                    ) : null}
+
+                                    <video
+                                        id={`video-${idx}`}
+                                        controls
+                                        poster={vid.preview_image || ""}
+                                        className="w-full h-48 object-cover rounded-b-xl"
+                                    >
+                                        <source src={vid.video} type="video/mp4" />
+                                        Your browser does not support video playback.
+                                    </video>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Info */}
                 <div className="p-4 space-y-1">
