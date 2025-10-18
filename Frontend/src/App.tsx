@@ -4,7 +4,7 @@ import RootLayout from './components/layouts/RootLayout'
 import AuthLayout from './components/layouts/AuthLayout'
 import { setAuth } from './store/auth'
 // import Navbar from './components/Navbar'
-import Register from './pages/auth/Register'
+import Register from './pages/auth/register/Register'
 
 const CategoryPage = lazy(() => import('./pages/category/CategoryPage'))
 const ProductDetail = lazy(() => import('./pages/Products/ProductDetail'))
