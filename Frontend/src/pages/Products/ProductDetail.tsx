@@ -12,7 +12,14 @@ interface Product {
     has3d?: boolean
     rating?: number
     discount?: number
+    videos?: ProductVideo[]
 }
+interface ProductVideo {
+    id: number;
+    video: string;
+    preview_image?: string | null;
+}
+
 
 export default function ProductDetailPage() {
     const { id } = useParams<{ id: string }>()
@@ -71,6 +78,7 @@ export default function ProductDetailPage() {
             transition={{ delay: 0 }}
             className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 max-w-3xl mx-auto"
         >
+<<<<<<< HEAD
             {/* Image */}
             <div className="relative">
                 <img
@@ -90,6 +98,64 @@ export default function ProductDetailPage() {
                     </span>
                 )}
             </div>
+=======
+            <Link to={`/product/${product.id}`}>
+                {/* Image */}
+                <div className="relative">
+                    <img
+                        src={product.thumbnail}
+                        alt={product.title}
+                        className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                    />
+                    {product.discount && (
+                        <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-md font-semibold">
+                            -{product.discount}%
+                        </span>
+                    )}
+                    {product.has3d && (
+                        <span className="absolute bottom-2 right-2 bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-md shadow">
+                            3D
+                        </span>
+                    )}
+                </div>
+                {/* --- Product Videos --- */}
+                {product.videos?.length > 0 && (
+                    <div className="mt-4 space-y-3">
+                        <h3 className="text-sm font-medium text-gray-700">Product Videos</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                            {product.videos.map((vid: ProductVideo, idx: number) => (
+                                <div key={idx} className="rounded-xl overflow-hidden shadow-sm bg-gray-100">
+                                    {vid.preview_image ? (
+                                        <div className="relative">
+                                            <img src={vid.preview_image} alt="Video preview" className="w-full h-48 object-cover" />
+                                            <button
+                                                onClick={() => {
+                                                    const videoEl = document.getElementById(`video-${idx}`) as HTMLVideoElement
+                                                    if (videoEl) videoEl.play()
+                                                }}
+                                                className="absolute inset-0 flex items-center justify-center bg-black/40 text-white text-lg font-bold rounded-xl"
+                                            >
+                                                ▶
+                                            </button>
+                                        </div>
+                                    ) : null}
+
+                                    <video
+                                        id={`video-${idx}`}
+                                        controls
+                                        poster={vid.preview_image || ""}
+                                        className="w-full h-48 object-cover rounded-b-xl"
+                                    >
+                                        <source src={vid.video} type="video/mp4" />
+                                        Your browser does not support video playback.
+                                    </video>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+>>>>>>> devMoazzam
 
             {/* Info */}
             <div className="p-6 space-y-3">
