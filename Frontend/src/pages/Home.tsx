@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import api from "../lib/api"
 import HeroBanner from "../components/Home/HeroBanner"
-import CategoryGrid from "../components/Home/CategoryGrid"
 import ProductGrid from "../components/Home/ProductGrid"
 
 interface Product {
@@ -33,7 +32,7 @@ export default function Home() {
 
     return (
         <div className="space-y-10">
-            <CategoryGrid />
+
             <HeroBanner />
             <ProductGrid items={items} loading={loading} />
         </div>
