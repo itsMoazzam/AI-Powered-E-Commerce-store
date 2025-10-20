@@ -25,6 +25,8 @@ export interface CustomerForm extends CommonForm {
     height?: number | "";
     address?: string;
     mobile?: string;
+
+
 }
 
 // Seller-specific fields
