@@ -9,7 +9,6 @@ import Register from './pages/auth/register/Register'
 const CategoryPage = lazy(() => import('./pages/category/CategoryPage'))
 const ProductDetail = lazy(() => import('./pages/Products/ProductDetail'))
 const Home = lazy(() => import('./pages/Home'))
-// const Product = lazy(() => import('./pages/Products/ProductDetail'))
 const Cart = lazy(() => import('./pages/Cart'))
 const Checkout = lazy(() => import('./pages/CheckOuts'))
 const AdminPanel = lazy(() => import('./pages/admin/AdminPanel'))

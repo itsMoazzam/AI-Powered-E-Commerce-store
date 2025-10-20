@@ -35,13 +35,17 @@ export default function ProductCard({
             transition={{ delay: index * 0.05 }}
             className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-100"
         >
-            <Link to={`/product/${product.id}`}>
-                {/* --- Product Image --- */}
+
+            <Link to={`/product/${product.id}`} target="_blank">
+                {/* Image */}
+
                 <div className="relative">
                     <img
                         src={product.thumbnail}
                         alt={product.title}
-                        className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+
+                        className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-110"
+
                         loading="lazy"
                     />
                     {product.discount && (
@@ -56,20 +60,18 @@ export default function ProductCard({
                     )}
                 </div>
 
-                {/* --- Product Info --- */}
-                <div className="p-4 space-y-2">
-                    <h3 className="font-semibold text-gray-900 line-clamp-1">{product.title}</h3>
+              
+                {/* Info */}
+                <div className="p-4 space-y-1">
+                    <h3 className="font-semibold text-gray-900 line-clamp-1">
+                        {product.title}
+                    </h3>
 
-                    {/* --- Price --- */}
-                    <div className="flex items-center gap-2 text-sm">
-                        <span className="text-indigo-600 font-semibold text-base">
-                            ${product.price.toFixed(2)}
+                    <div className="text-sm text-gray-600 flex items-center gap-2">
+                        <span className="text-indigo-600 font-medium">
+                            ${Number(product.price).toFixed(2)}
+
                         </span>
-                        {product.discount && (
-                            <span className="text-gray-400 line-through text-xs">
-                                ${(product.price / (1 - product.discount / 100)).toFixed(2)}
-                            </span>
-                        )}
                     </div>
 
                     {/* --- Rating --- */}

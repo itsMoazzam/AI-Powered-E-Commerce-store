@@ -1,4 +1,16 @@
 // src/lib/demoProducts.ts
+
+export type ProductVideo = {
+    id: number
+    video: string
+    preview_image?: string | null
+}
+
+export type Seller = {
+    name: string
+    logo: string
+}
+
 export type DemoProduct = {
     id: number
     title: string
@@ -8,7 +20,12 @@ export type DemoProduct = {
     subCategory?: string
     has3d?: boolean
     rating?: number
+    ratingCount?: number
+    reviewsCount?: number
     discount?: number
+    description?: string
+    seller?: Seller
+    videos?: ProductVideo[]
 }
 
 export const demoProducts: DemoProduct[] = [
@@ -22,7 +39,19 @@ export const demoProducts: DemoProduct[] = [
         subCategory: "Clothing",
         has3d: true,
         rating: 4.2,
+        ratingCount: 128,
+        reviewsCount: 46,
         discount: 15,
+        description:
+            "Crafted from soft cotton, this men's casual shirt offers a relaxed fit perfect for everyday wear. Available in multiple colors.",
+        seller: { name: "Urban Threads", logo: "/images/seller-urban.png" },
+        videos: [
+            {
+                id: 1,
+                video: "/videos/shirt-demo.mp4",
+                preview_image: "/images/shirt-preview.jpg",
+            },
+        ],
     },
     {
         id: 2,
@@ -33,6 +62,11 @@ export const demoProducts: DemoProduct[] = [
         subCategory: "Shoes",
         has3d: true,
         rating: 4.5,
+        ratingCount: 220,
+        reviewsCount: 90,
+        description:
+            "Lightweight running shoes with breathable mesh and responsive cushioning for all-day comfort.",
+        seller: { name: "FitStride", logo: "/images/seller-fitstride.png" },
     },
     {
         id: 3,
@@ -42,6 +76,11 @@ export const demoProducts: DemoProduct[] = [
         category: "Men",
         subCategory: "Watches",
         rating: 4.8,
+        ratingCount: 340,
+        reviewsCount: 112,
+        description:
+            "Elegant stainless-steel watch featuring quartz movement and water resistance. Designed for timeless sophistication.",
+        seller: { name: "Elite Timepieces", logo: "/images/seller-elite.png" },
     },
 
     // --- Women ---
@@ -53,6 +92,11 @@ export const demoProducts: DemoProduct[] = [
         category: "Women",
         subCategory: "Handbags",
         rating: 4.4,
+        ratingCount: 180,
+        reviewsCount: 77,
+        description:
+            "Premium faux leather handbag with spacious compartments and elegant gold accents — perfect for any occasion.",
+        seller: { name: "Chic Trends", logo: "/images/seller-chic.png" },
     },
     {
         id: 5,
@@ -63,6 +107,12 @@ export const demoProducts: DemoProduct[] = [
         subCategory: "Shoes",
         has3d: true,
         discount: 10,
+        rating: 4.6,
+        ratingCount: 205,
+        reviewsCount: 65,
+        description:
+            "Stylish sneakers with memory foam insoles and flexible sole design. Ideal for fashion and comfort.",
+        seller: { name: "Viva Fashion", logo: "/images/seller-viva.png" },
     },
 
     // --- Kids ---
@@ -73,6 +123,11 @@ export const demoProducts: DemoProduct[] = [
         thumbnail: "/images/kids-bag.jpg",
         category: "Kids",
         subCategory: "School Supplies",
+        rating: 4.3,
+        reviewsCount: 34,
+        description:
+            "Durable and colorful school bag designed for kids, featuring multiple compartments and ergonomic straps.",
+        seller: { name: "EduGear", logo: "/images/seller-edugear.png" },
     },
     {
         id: 7,
@@ -81,6 +136,11 @@ export const demoProducts: DemoProduct[] = [
         thumbnail: "/images/kids-toy.jpg",
         category: "Kids",
         subCategory: "Toys & Games",
+        rating: 4.7,
+        reviewsCount: 52,
+        description:
+            "Exciting toy car with friction-powered motion and realistic detailing — fun for kids aged 3 and up.",
+        seller: { name: "PlayWorld", logo: "/images/seller-playworld.png" },
     },
 
     // --- Electronics ---
@@ -93,6 +153,18 @@ export const demoProducts: DemoProduct[] = [
         subCategory: "Smartphones",
         has3d: true,
         rating: 4.7,
+        ratingCount: 910,
+        reviewsCount: 321,
+        description:
+            "The next-gen Smartphone Pro delivers stunning performance, AI-powered camera, and a vibrant AMOLED display.",
+        seller: { name: "TechOne", logo: "/images/seller-techone.png" },
+        videos: [
+            {
+                id: 1,
+                video: "/videos/phone-demo.mp4",
+                preview_image: "/images/phone-preview.jpg",
+            },
+        ],
     },
     {
         id: 9,
@@ -101,6 +173,12 @@ export const demoProducts: DemoProduct[] = [
         thumbnail: "/images/laptop.jpg",
         category: "Electronics",
         subCategory: "Laptops",
+        rating: 4.9,
+        ratingCount: 400,
+        reviewsCount: 145,
+        description:
+            "Powerful gaming laptop featuring RTX graphics, 16GB RAM, and a fast-refresh display. Built for elite gamers.",
+        seller: { name: "NextGen Tech", logo: "/images/seller-nextgen.png" },
     },
 
     // --- Home & Furniture ---
@@ -112,6 +190,12 @@ export const demoProducts: DemoProduct[] = [
         category: "Home & Furniture",
         subCategory: "Living Room",
         has3d: true,
+        rating: 4.5,
+        ratingCount: 95,
+        reviewsCount: 42,
+        description:
+            "A stylish and comfortable 3-seater sofa made with premium upholstery. Ideal for modern living spaces.",
+        seller: { name: "Comfort Living", logo: "/images/seller-comfort.png" },
     },
 
     // --- Beauty ---
@@ -122,6 +206,12 @@ export const demoProducts: DemoProduct[] = [
         thumbnail: "/images/makeup.jpg",
         category: "Beauty",
         subCategory: "Makeup",
+        rating: 4.4,
+        ratingCount: 130,
+        reviewsCount: 53,
+        description:
+            "Complete all-in-one makeup kit with eyeshadows, lipsticks, and blush — perfect for travel or daily use.",
+        seller: { name: "GlowUp", logo: "/images/seller-glowup.png" },
     },
 
     // --- Sports ---
@@ -132,6 +222,12 @@ export const demoProducts: DemoProduct[] = [
         thumbnail: "/images/yoga-mat.jpg",
         category: "Sports",
         subCategory: "Fitness",
+        rating: 4.6,
+        ratingCount: 80,
+        reviewsCount: 20,
+        description:
+            "Non-slip yoga mat made from eco-friendly material for comfort and stability during your workout.",
+        seller: { name: "ZenSport", logo: "/images/seller-zensport.png" },
     },
 
     // --- Automotive ---
@@ -142,6 +238,12 @@ export const demoProducts: DemoProduct[] = [
         thumbnail: "/images/car-seat.jpg",
         category: "Automotive",
         subCategory: "Car Accessories",
+        rating: 4.5,
+        ratingCount: 120,
+        reviewsCount: 45,
+        description:
+            "Premium leather car seat covers that protect your seats while enhancing comfort and luxury.",
+        seller: { name: "AutoCraft", logo: "/images/seller-autocraft.png" },
     },
 
     // --- Books & Media ---
@@ -152,6 +254,12 @@ export const demoProducts: DemoProduct[] = [
         thumbnail: "/images/book.jpg",
         category: "Books & Media",
         subCategory: "Books",
+        rating: 4.9,
+        ratingCount: 250,
+        reviewsCount: 95,
+        description:
+            "An award-winning novel with a compelling story that keeps readers hooked till the last page.",
+        seller: { name: "LitPress", logo: "/images/seller-litpress.png" },
     },
 
     // --- Offers ---
@@ -162,6 +270,12 @@ export const demoProducts: DemoProduct[] = [
         thumbnail: "/images/headphones.jpg",
         category: "Offers",
         discount: 50,
+        rating: 4.3,
+        ratingCount: 310,
+        reviewsCount: 132,
+        description:
+            "Noise-cancelling headphones with superior bass and 20 hours of playback. Limited-time 50% off!",
+        seller: { name: "AudioMax", logo: "/images/seller-audiomax.png" },
     },
 
     // --- New Arrivals ---
@@ -172,5 +286,18 @@ export const demoProducts: DemoProduct[] = [
         thumbnail: "/images/smart-glasses.jpg",
         category: "New Arrivals",
         has3d: true,
+        rating: 4.6,
+        ratingCount: 45,
+        reviewsCount: 18,
+        description:
+            "Augmented-reality smart glasses with voice assistant, Bluetooth audio, and UV protection.",
+        seller: { name: "FutureVision", logo: "/images/seller-futurevision.png" },
+        videos: [
+            {
+                id: 1,
+                video: "/videos/glasses-demo.mp4",
+                preview_image: "/images/glasses-preview.jpg",
+            },
+        ],
     },
 ]
