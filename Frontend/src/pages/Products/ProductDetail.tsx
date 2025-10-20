@@ -1,7 +1,11 @@
+// src/components/ProductDetailPage.tsx
 import { useParams, Link } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Star, Store } from "lucide-react"
+import api from "../../lib/api"
+import ReviewForm from "../../components/Reviews/ReviewForm"
+import ReviewList from "../../components/Reviews/ReviewList"
 
 interface ProductVideo {
     id: number
@@ -17,8 +21,9 @@ interface Seller {
 interface Product {
     id: number
     title: string
-    price: number
+    price: number | string
     thumbnail: string
+    images?: string[]
     has3d?: boolean
     rating?: number
     ratingCount?: number
@@ -27,6 +32,8 @@ interface Product {
     description?: string
     seller?: Seller
     videos?: ProductVideo[]
+    stock?: number
+    category?: string
 }
 
 export default function ProductDetailPage() {
@@ -42,39 +49,49 @@ export default function ProductDetailPage() {
             return
         }
 
-        let cancelled = false
-        setLoading(true)
-
-        setTimeout(() => {
-            if (cancelled) return
-
-            import("../../lib/demoProducts")
-                .then(({ demoProducts }) => {
-                    const foundProduct = demoProducts.find((p: Product) => p.id === parseInt(id))
-                    if (foundProduct) setProduct(foundProduct)
-                    else setError("Product not found")
+        const controller = new AbortController()
+        async function fetchProduct() {
+            try {
+                setLoading(true)
+                const response = await api.get(`/api/products/${id}/`, {
+                    signal: controller.signal,
                 })
-                .catch(() => setError("Failed to load product"))
-                .finally(() => setLoading(false))
-        }, 1000)
-
-        return () => {
-            cancelled = true
+                setProduct(response.data)
+            } catch (err: any) {
+                if (err.name !== "CanceledError") {
+                    console.error("Failed to load product:", err)
+                    setError("Failed to load product details. Please try again later.")
+                }
+            } finally {
+                setLoading(false)
+            }
         }
+
+        fetchProduct()
+        return () => controller.abort()
     }, [id])
 
-    if (loading) return <div className="p-6 text-center">Loading product…</div>
-    if (error || !product)
-        return <div className="p-6 text-center text-red-600">Error: {error ?? "Product not found"}</div>
+    if (loading)
+        return (
+            <div className="p-10 text-center text-gray-500 animate-pulse">
+                Loading product details…
+            </div>
+        )
 
-    // Discount calculations
+    if (error || !product)
+        return (
+            <div className="p-10 text-center text-red-600 font-medium">
+                {error || "Product not found"}
+            </div>
+        )
+
+    // 🧮 Price calculations
+    const basePrice = Number(product.price)
     const hasDiscount = product.discount && product.discount > 0
-    const originalPrice = hasDiscount
-        ? product.price
-        : product.price * (1 + Math.random() * 0.3)
     const discountedPrice = hasDiscount
-        ? product.price * (1 - (product.discount ?? 0) / 100)
-        : product.price
+        ? basePrice * (1 - (product.discount ?? 0) / 100)
+        : basePrice
+    const discountAmount = hasDiscount ? basePrice - discountedPrice : 0
 
     return (
         <motion.div
@@ -84,28 +101,52 @@ export default function ProductDetailPage() {
             className="bg-white"
         >
             <div className="pt-6">
-                {/* Breadcrumb */}
-                <nav aria-label="Breadcrumb" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                {/* 🔹 Breadcrumb */}
+                <nav
+                    aria-label="Breadcrumb"
+                    className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
+                >
                     <ol className="flex items-center space-x-2 text-sm text-gray-600">
-                        <li><Link to="/" className="hover:text-indigo-600">Home</Link></li>
+                        <li>
+                            <Link to="/" className="hover:text-indigo-600">
+                                Home
+                            </Link>
+                        </li>
                         <li>/</li>
-                        <li><Link to="/catalog" className="hover:text-indigo-600">Catalog</Link></li>
+                        <li>
+                            <Link to="/catalog" className="hover:text-indigo-600">
+                                Catalog
+                            </Link>
+                        </li>
                         <li>/</li>
                         <li className="text-gray-900 font-medium">{product.title}</li>
                     </ol>
                 </nav>
 
-                {/* Product layout */}
+                {/* 🔹 Product layout */}
                 <div className="mx-auto mt-6 max-w-7xl grid grid-cols-1 lg:grid-cols-3 gap-10 px-4 sm:px-6 lg:px-8">
-                    {/* --- Left: Image Gallery --- */}
+                    {/* --- Left: Image / Video Gallery --- */}
                     <div className="lg:col-span-2 space-y-4">
                         <img
                             src={product.thumbnail}
                             alt={product.title}
-                            className="rounded-lg object-cover w-full h-[500px] shadow-sm"
+                            className="rounded-lg object-cover w-full h-[480px] shadow-sm"
                         />
+                        {product.images?.length ? (
+                            <div className="grid grid-cols-3 gap-3">
+                                {product.images.map((img, i) => (
+                                    <img
+                                        key={i}
+                                        src={img}
+                                        alt={`${product.title}-${i}`}
+                                        className="rounded-lg w-full h-32 object-cover border hover:opacity-80 transition"
+                                    />
+                                ))}
+                            </div>
+                        ) : null}
+
                         {product.videos?.length ? (
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-4 mt-4">
                                 {product.videos.map((vid) => (
                                     <video
                                         key={vid.id}
@@ -137,9 +178,11 @@ export default function ProductDetailPage() {
                         )}
 
                         {/* Title */}
-                        <h1 className="text-2xl font-semibold text-gray-900">{product.title}</h1>
+                        <h1 className="text-2xl font-semibold text-gray-900">
+                            {product.title}
+                        </h1>
 
-                        {/* Rating & Reviews */}
+                        {/* Rating */}
                         <div className="flex items-center gap-2 mt-2">
                             {product.rating !== undefined && (
                                 <div className="flex items-center text-yellow-500">
@@ -153,7 +196,9 @@ export default function ProductDetailPage() {
                                 </div>
                             )}
                             {product.ratingCount && (
-                                <span className="text-sm text-gray-500">{product.ratingCount} ratings</span>
+                                <span className="text-sm text-gray-500">
+                                    {product.ratingCount} ratings
+                                </span>
                             )}
                             {product.reviewsCount && (
                                 <span className="text-sm text-indigo-600 hover:underline cursor-pointer">
@@ -166,13 +211,13 @@ export default function ProductDetailPage() {
                         <div className="mt-4 space-y-1">
                             {hasDiscount && (
                                 <div className="text-sm text-green-600 font-medium">
-                                    Save {product.discount}% (${(originalPrice - discountedPrice).toFixed(2)} OFF)
+                                    Save {product.discount}% (${discountAmount.toFixed(2)} OFF)
                                 </div>
                             )}
                             <div className="flex items-baseline gap-3">
                                 {hasDiscount && (
                                     <span className="text-gray-400 line-through text-lg">
-                                        ${originalPrice.toFixed(2)}
+                                        ${basePrice.toFixed(2)}
                                     </span>
                                 )}
                                 <span className="text-3xl font-bold text-indigo-600">
@@ -191,11 +236,34 @@ export default function ProductDetailPage() {
                             </button>
                         </div>
 
+                        {/* Stock */}
+                        {product.stock !== undefined && (
+                            <p
+                                className={`mt-3 text-sm ${product.stock > 0 ? "text-green-600" : "text-red-500"
+                                    }`}
+                            >
+                                {product.stock > 0
+                                    ? `In Stock (${product.stock} available)`
+                                    : "Out of Stock"}
+                            </p>
+                        )}
+
                         {/* Description */}
                         <div className="mt-8 border-t pt-4 text-gray-700 text-sm leading-relaxed">
                             {product.description ||
-                                "This is a high-quality product designed for performance and comfort. Replace this with the product’s actual description from your API."}
+                                "This product is crafted with premium materials and designed for lasting performance."}
                         </div>
+                    </div>
+                </div>
+
+                {/* 🔹 Reviews Section */}
+                <div className="max-w-5xl mx-auto mt-12 px-4 sm:px-6 lg:px-8">
+                    <h2 className="text-2xl font-bold mb-4 text-gray-900">
+                        Customer Feedback
+                    </h2>
+                    <ReviewForm productId={Number(id)} />
+                    <div className="mt-8">
+                        <ReviewList productId={Number(id)} />
                     </div>
                 </div>
             </div>

@@ -1,3 +1,4 @@
+// src/components/ProductCard.tsx
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Star } from "lucide-react"
@@ -12,7 +13,13 @@ interface Product {
     discount?: number
 }
 
-export default function ProductCard({ product, index }: { product: Product; index: number }) {
+export default function ProductCard({
+    product,
+    index,
+}: {
+    product: Product
+    index: number
+}) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -20,13 +27,13 @@ export default function ProductCard({ product, index }: { product: Product; inde
             transition={{ delay: index * 0.05 }}
             className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-100"
         >
-            <Link to={`/product/${product.id}`} target="_blank_">
+            <Link to={`/product/${product.id}`} target="_blank">
                 {/* Image */}
                 <div className="relative">
                     <img
                         src={product.thumbnail}
                         alt={product.title}
-                        className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-115"
+                        className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-110"
                         loading="lazy"
                     />
                     {product.discount && (
@@ -43,9 +50,15 @@ export default function ProductCard({ product, index }: { product: Product; inde
 
                 {/* Info */}
                 <div className="p-4 space-y-1">
-                    <h3 className="font-semibold text-gray-900 line-clamp-1">{product.title}</h3>
+                    <h3 className="font-semibold text-gray-900 line-clamp-1">
+                        {product.title}
+                    </h3>
+
                     <div className="text-sm text-gray-600 flex items-center gap-2">
-                        <span className="text-indigo-600 font-medium">${product.price.toFixed(2)}</span>
+                        <span className="text-indigo-600 font-medium">
+                            ${Number(product.price).toFixed(2)}
+
+                        </span>
                     </div>
 
                     {/* Rating */}

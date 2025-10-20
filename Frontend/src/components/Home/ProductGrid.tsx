@@ -1,66 +1,77 @@
+// src/components/ProductGrid.tsx
+import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import ProductCard from "./ProductCard"
+import api from "../../lib/api" // ✅ your Axios wrapper
 
-// Sample static data for testing (frontend only)
-const sampleProducts = [
-    {
-        id: 1,
-        title: "Wireless Headphones",
-        price: 59.99,
-        thumbnail: "https://images.unsplash.com/photo-1585386959984-a41552231693?auto=format&fit=crop&w=600&q=80",
-        has3d: true,
-        rating: 4.5,
-        discount: 20,
-    },
-    {
-        id: 2,
-        title: "Men’s Casual Sneakers",
-        price: 89.99,
-        thumbnail: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80",
-        rating: 4.2,
-    },
-    {
-        id: 3,
-        title: "Smartwatch Pro Edition",
-        price: 199.99,
-        thumbnail: "https://images.unsplash.com/photo-1516893844322-4d8b114f3b4d?auto=format&fit=crop&w=600&q=80",
-        has3d: true,
-        rating: 4.8,
-        discount: 15,
-    },
-    {
-        id: 4,
-        title: "Luxury Leather Handbag",
-        price: 149.99,
-        thumbnail: "https://images.unsplash.com/photo-1593032465171-8b44c4ce1c1d?auto=format&fit=crop&w=600&q=80",
-        rating: 4.9,
-    },
-    {
-        id: 5,
-        title: "Gaming Laptop",
-        price: 1299.99,
-        thumbnail: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80",
-        has3d: true,
-        rating: 4.7,
-    },
-]
+interface Product {
+    id: number
+    title: string
+    price: number | string
+    thumbnail: string
+    has3d?: boolean
+    rating?: number
+    discount?: number
+}
 
 export default function ProductGrid() {
-    // 🔹 Future Backend Integration (commented for now)
-    /*
+    const [products, setProducts] = useState<Product[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+
     useEffect(() => {
-        fetch("/api/products/")
-            .then(res => res.json())
-            .then(data => setProducts(data))
-            .catch(err => console.error("Error fetching products:", err))
+        const fetchProducts = async () => {
+            try {
+                setLoading(true)
+                const response = await api.get("/api/products/") // ✅ Django REST endpoint
+                setProducts(response.data)
+            } catch (err) {
+                console.error("Error fetching products:", err)
+                setError("Failed to load products. Please try again later.")
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchProducts()
     }, [])
-    */
+
+    if (loading)
+        return (
+            <section className="px-4 md:px-10 py-16 bg-gray-50 text-center">
+                <div className="animate-pulse text-gray-400 text-lg">Loading products...</div>
+            </section>
+        )
+
+    if (error)
+        return (
+            <section className="px-4 md:px-10 py-16 bg-gray-50 text-center text-red-500 font-medium">
+                {error}
+            </section>
+        )
+
+    if (!products.length)
+        return (
+            <section className="px-4 md:px-10 py-16 bg-gray-50 text-center text-gray-500">
+                No products found.
+            </section>
+        )
 
     return (
         <section className="px-4 md:px-10 py-10 bg-gray-50">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Featured Products</h2>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">✨ Featured Products</h2>
+                <Link
+                    to="/products"
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium transition"
+                >
+                    View All →
+                </Link>
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {sampleProducts.map((product, index) => (
-                    <ProductCard key={product.id} product={product} index={index} />
+                {products.map((product, index) => (
+                    <ProductCard key={product.id || index} product={product} index={index} />
                 ))}
             </div>
         </section>
