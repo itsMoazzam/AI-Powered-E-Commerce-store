@@ -1,10 +1,10 @@
 // src/components/CategoryNavbar.tsx
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Link } from "react-router-dom"
-import { Menu, X, ChevronDown, ChevronRight } from "lucide-react"
-import { FaCartPlus } from "react-icons/fa6";
-
-// import api from "../lib/api" 
+import { Menu, X, ChevronRight } from "lucide-react"
+import { FaShoppingCart, FaSearch, FaHeart } from "react-icons/fa"
+import { RxCross2 } from "react-icons/rx"
+import Cart from "./Cart"
 
 type RawCategory = {
     id: number
@@ -15,185 +15,335 @@ type RawCategory = {
 }
 
 export default function CategoryNavbar() {
-    const [mobileOpen, setMobileOpen] = useState(false)
-    const [expanded, setExpanded] = useState<Record<number, boolean>>({})
     const [categories, setCategories] = useState<RawCategory[]>([])
+    const [hoveredCategory, setHoveredCategory] = useState<RawCategory | null>(null)
+    const [cartOpen, setCartOpen] = useState(false)
+    const [userMenuOpen, setUserMenuOpen] = useState(false)
+    const [user, setUser] = useState<{ username?: string; avatar?: string } | null>(null)
     const [loading, setLoading] = useState(true)
+    const [searchQuery, setSearchQuery] = useState("")
+    const [menuOpen, setMenuOpen] = useState(false)
+    const [menuHovered, setMenuHovered] = useState(false)
+    const [hoverPath, setHoverPath] = useState<number[]>([])
+    const menuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     useEffect(() => {
-        let mounted = true
-
-        async function load() {
-            setLoading(true)
-            try {
-                // === PRODUCTION: uncomment to fetch from backend ===
-                // const { data } = await api.get("/api/categories/")
-                // if (!mounted) return
-                // setCategories(data)
-
-                // === DEMO FALLBACK for frontend-only testing ===
-                const demo: RawCategory[] = [
+        const demo: RawCategory[] = [
+            {
+                id: 1,
+                name: "Men",
+                slug: "men",
+                children: [
                     {
-                        id: 1,
-                        name: "Men",
-                        slug: "men",
+                        id: 11,
+                        name: "Clothing",
+                        slug: "clothing",
                         children: [
-                            { id: 11, name: "Clothing", slug: "clothing", children: [{ id: 111, name: "T-Shirts", slug: "t-shirts" }] },
-                            { id: 12, name: "Shoes", slug: "shoes" },
-                            { id: 13, name: "Accessories", slug: "accessories" },
+                            { id: 111, name: "T-Shirts", slug: "t-shirts" },
+                            { id: 112, name: "Jeans", slug: "jeans" },
                         ],
                     },
-                    {
-                        id: 2,
-                        name: "Women",
-                        slug: "women",
-                        children: [
-                            { id: 21, name: "Clothing", slug: "clothing-women" },
-                            { id: 22, name: "Handbags", slug: "handbags" },
-                        ],
-                    },
-                    { id: 3, name: "Electronics", slug: "electronics" },
-                    { id: 4, name: "Home & Furniture", slug: "home-furniture" },
-                    { id: 5, name: "Offers", slug: "offers" },
-                ]
-                if (mounted) setCategories(demo)
-            } catch (err) {
-                console.error("Failed to load categories", err)
-            } finally {
-                if (mounted) setLoading(false)
+                    { id: 12, name: "Shoes", slug: "shoes" },
+                    { id: 13, name: "Accessories", slug: "accessories" },
+                ],
+            },
+            {
+                id: 2,
+                name: "Women",
+                slug: "women",
+                children: [
+                    { id: 21, name: "Clothing", slug: "clothing-women" },
+                    { id: 22, name: "Handbags", slug: "handbags" },
+                    { id: 23, name: "Jewelry", slug: "jewelry" },
+                ],
+            },
+            { id: 3, name: "Electronics", slug: "electronics" },
+            { id: 4, name: "Home & Furniture", slug: "home-furniture" },
+            { id: 5, name: "Offers", slug: "offers" },
+        ]
+        setCategories(demo)
+        setLoading(false)
+
+        try {
+            const raw = localStorage.getItem("user")
+            if (raw) {
+                const parsed = JSON.parse(raw)
+                setUser({
+                    username: parsed.username || parsed.email || "User",
+                    avatar: parsed.profile_photo || "",
+                })
             }
-        }
-
-        load()
-        return () => {
-            mounted = false
+        } catch {
+            // ignore parsing errors
         }
     }, [])
 
-    function toggleExpand(id: number) {
-        setExpanded((s) => ({ ...s, [id]: !s[id] }))
+    function handleCartToggle() {
+        setCartOpen(!cartOpen)
     }
 
-    function renderCategory(cat: RawCategory, level = 0) {
-        const hasChildren = (cat.children && cat.children.length > 0) || false
-        return (
-            <div key={cat.id} className={`flex flex-col`}>
-                <div
-                    className={`flex items-center justify-between gap-4 py-2 px-3 rounded-md transition-colors
-            ${level === 0 ? "text-gray-800 dark:text-gray-100" : "text-gray-700 dark:text-gray-300"}
-            hover:bg-gray-50 dark:hover:bg-zinc-800`}
-                >
-                    <Link
-                        to={`/category/${cat.slug ?? cat.name.toLowerCase().replace(/\s+/g, "-")}`}
-                        className="truncate grow"
-                        onClick={() => setMobileOpen(false)}
-                    >
-                        <span className={`font-medium ${level === 0 ? "text-base" : "text-sm"}`}>
-                            {cat.name}
-                        </span>
-                    </Link>
+    function handleLogout() {
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        setUser(null)
+        window.location.href = "/"
+    }
 
-                    {hasChildren && (
-                        <button
-                            aria-expanded={!!expanded[cat.id]}
-                            onClick={() => toggleExpand(cat.id)}
-                            className="ml-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800"
-                            title={expanded[cat.id] ? "Collapse" : "Expand"}
-                        >
-                            {level === 0 ? (
-                                <ChevronDown
-                                    className={`w-4 h-4 transition-transform ${expanded[cat.id] ? "rotate-180" : ""}`}
-                                />
-                            ) : (
-                                <ChevronRight
-                                    className={`w-4 h-4 transition-transform ${expanded[cat.id] ? "rotate-90" : ""}`}
-                                />
-                            )}
-                        </button>
-                    )}
-                </div>
+    function handleSearch(e: React.FormEvent) {
+        e.preventDefault()
+        if (searchQuery.trim()) {
+            window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`
+        }
+    }
 
-                {hasChildren && expanded[cat.id] && (
-                    <div className={`ml-${Math.min(level + 1, 6) * 4} mt-1`}>
-                        {cat.children!.map((c) => renderCategory(c, level + 1))}
-                    </div>
-                )}
-            </div>
-        )
+    const openMenu = menuHovered || menuOpen
+
+    // Helper to clear close timeout
+    const clearMenuTimeout = () => {
+        if (menuTimeout.current) clearTimeout(menuTimeout.current)
+    }
+
+    // Helper to close with delay
+    const delayedCloseMenu = () => {
+        clearMenuTimeout()
+        menuTimeout.current = setTimeout(() => {
+            setMenuHovered(false)
+            setHoveredCategory(null)
+            setHoverPath([])
+        }, 800) // smoother close
     }
 
     return (
-        <nav className="bg-white border-b border-gray-200 dark:bg-zinc-950 dark:border-zinc-800 sticky top-0 z-40">
-            <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16">
-                {/* Logo */}
-                <Link to="/" className="text-2xl font-extrabold text-gray-900 dark:text-white">
-                    ShopVerse
-                </Link>
+        <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16 gap-4">
 
-                {/* Desktop Flat Menu: first-level categories */}
-                <div className="hidden md:flex items-center gap-6">
-                    {!loading && categories.length > 0 ? (
-                        categories.map((cat) => (
-                            <div key={cat.id} className="flex items-center gap-2">
-                                <Link
-                                    to={`/category/${cat.slug ?? cat.name.toLowerCase().replace(/\s+/g, "-")}`}
-                                    className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium px-2 py-1 rounded-md"
-                                >
-                                    {cat.name}
-                                </Link>
-                                {/* show subtle arrow if category has children */}
-                                {cat.children && cat.children.length > 0 && (
-                                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                {/* Left side: Logo + Hamburger */}
+                <div className="flex items-center gap-3">
+                    {/* Logo */}
+                    <Link to="/" className="flex items-center gap-2 text-2xl font-extrabold text-gray-900">
+                        <img
+                            src="https://i.ibb.co/NnSYYC6d/Gemini-Generated-Image-6xewhm6xewhm6xew-1.png"
+                            alt="logo"
+                            width={45}
+                            className="rounded-full"
+                        />
+                        <p>
+                            <b className="text-red-500">AI</b>
+                            <small className="text-green-500">Powered</small>{" "}
+                            <i className="text-blue-500">Store</i>
+                        </p>
+                    </Link>
+
+                    {/* Hamburger */}
+                    <div
+                        className="relative"
+                        onMouseEnter={() => {
+                            clearMenuTimeout()
+                            setMenuHovered(true)
+                        }}
+                        onMouseLeave={delayedCloseMenu}
+                    >
+                        <button
+                            onClick={() => setMenuOpen(!menuOpen)}
+                            className="p-1 rounded-md text-blue-500 hover:bg-gray-100 transition flex flex-row items-center gap-1"
+                            aria-label="Categories Menu"
+                        >
+                            {openMenu ? <X size={22} /> : <Menu size={22} />}
+                            Categories
+                        </button>
+
+                        {/* Dropdown */}
+                        {openMenu && (
+                            <div
+                                className="absolute top-full left-0 w-60 bg-white shadow-lg border rounded-md mt-2 z-50"
+                                onMouseEnter={clearMenuTimeout}
+                                onMouseLeave={delayedCloseMenu}
+                            >
+                                {loading ? (
+                                    <div className="p-3 text-sm text-gray-500">Loading...</div>
+                                ) : (
+                                    categories.map((cat) => (
+                                        <div
+                                            key={cat.id}
+                                            className="relative group"
+                                            onMouseEnter={() => {
+                                                clearMenuTimeout()
+                                                setHoveredCategory(cat)
+                                                setHoverPath([cat.id])
+                                            }}
+                                            onMouseLeave={delayedCloseMenu}
+                                        >
+                                            <Link
+                                                to={`/category/${cat.slug}`}
+                                                className="flex justify-between items-center px-4 py-2 hover:bg-gray-50 text-gray-800 text-sm font-medium"
+                                            >
+                                                {cat.name}
+                                                {cat.children && <ChevronRight size={14} />}
+                                            </Link>
+
+                                            {/* Subcategory Flyout */}
+                                            {hoverPath.includes(cat.id) && cat.children && (
+                                                <div
+                                                    className="absolute top-0 left-full w-56 bg-white shadow-md border rounded-md ml-1"
+                                                    onMouseEnter={clearMenuTimeout}
+                                                    onMouseLeave={delayedCloseMenu}
+                                                >
+                                                    {cat.children.map((child) => (
+                                                        <div
+                                                            key={child.id}
+                                                            className="relative group"
+                                                            onMouseEnter={() => {
+                                                                clearMenuTimeout()
+                                                                setHoveredCategory(child)
+                                                                setHoverPath([cat.id, child.id])
+                                                            }}
+                                                            onMouseLeave={delayedCloseMenu}
+                                                        >
+                                                            <Link
+                                                                to={`/category/${child.slug}`}
+                                                                className="flex justify-between items-center px-4 py-2 hover:bg-gray-50 text-gray-700 text-sm"
+                                                            >
+                                                                {child.name}
+                                                                {child.children && <ChevronRight size={12} />}
+                                                            </Link>
+
+                                                            {/* Nested Child */}
+                                                            {hoverPath.includes(child.id) && child.children && (
+                                                                <div
+                                                                    className="absolute top-0 left-full w-52 bg-white shadow-md border rounded-md ml-1"
+                                                                    onMouseEnter={clearMenuTimeout}
+                                                                    onMouseLeave={delayedCloseMenu}
+                                                                >
+                                                                    {child.children.map((sub) => (
+                                                                        <Link
+                                                                            key={sub.id}
+                                                                            to={`/category/${sub.slug}`}
+                                                                            className="block px-4 py-2 hover:bg-gray-50 text-gray-600 text-sm"
+                                                                        >
+                                                                            {sub.name}
+                                                                        </Link>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
                                 )}
                             </div>
-                        ))
+                        )}
+                    </div>
+                </div>
+
+                {/* Search bar */}
+                <form
+                    onSubmit={handleSearch}
+                    className="flex-1 flex items-center max-w-xl mx-auto bg-gray-100 rounded-full px-3 py-1.5"
+                >
+                    <input
+                        type="text"
+                        placeholder="Search products..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="flex-1 bg-transparent outline-none text-sm px-2 text-gray-800"
+                    />
+                    <button
+                        type="submit"
+                        className="text-gray-600 hover:text-blue-600 p-2 rounded-full hover:bg-gray-200"
+                        aria-label="Search"
+                    >
+                        <FaSearch size={16} />
+                    </button>
+                </form>
+
+                {/* Right side: Wishlist + Cart + User */}
+                <div className="flex items-center gap-4">
+                    {/* Wishlist */}
+                    <Link
+                        to="/wishlist"
+                        className="p-2 text-pink-500 rounded-md hover:bg-gray-100"
+                        aria-label="Wishlist"
+                    >
+                        <FaHeart size={18} />
+                    </Link>
+
+                    {/* Cart */}
+                    <div className="relative">
+                        <button
+                            onClick={handleCartToggle}
+                            className="p-2 text-blue-500 rounded-md hover:bg-gray-100"
+                            aria-label="Open cart"
+                        >
+                            <FaShoppingCart size={18} />
+                        </button>
+                        {cartOpen && (
+                            <div className="absolute right-0 mt-2 w-96 bg-white border rounded-lg shadow-lg p-4 z-50">
+                                <div className="flex justify-between items-start">
+                                    <h3 className="text-sm font-medium">Your Cart</h3>
+                                    <button
+                                        onClick={() => setCartOpen(false)}
+                                        className="p-1 rounded hover:bg-gray-200"
+                                    >
+                                        <RxCross2 />
+                                    </button>
+                                </div>
+                                <div className="mt-3">
+                                    <Cart />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* User Menu */}
+                    {!user ? (
+                        <Link
+                            to="/auth/login"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
+                        >
+                            Sign In
+                        </Link>
                     ) : (
-                        // skeleton placeholders when loading
-                        <div className="flex gap-4">
-                            <div className="h-4 w-20 bg-gray-200 dark:bg-zinc-800 rounded" />
-                            <div className="h-4 w-14 bg-gray-200 dark:bg-zinc-800 rounded" />
-                            <div className="h-4 w-16 bg-gray-200 dark:bg-zinc-800 rounded" />
+                        <div className="relative">
+                            <button
+                                onClick={() => setUserMenuOpen((s) => !s)}
+                                className="flex items-center gap-2 px-3 py-1 rounded-full hover:bg-gray-100"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-medium">
+                                    {user.avatar ? (
+                                        <img
+                                            src={user.avatar}
+                                            alt="avatar"
+                                            className="w-full h-full object-cover rounded-full"
+                                        />
+                                    ) : (
+                                        (user.username || "U")[0].toUpperCase()
+                                    )}
+                                </div>
+                                <span className="text-sm text-gray-700">{user.username}</span>
+                            </button>
+
+                            {userMenuOpen && (
+                                <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-md py-2">
+                                    <Link
+                                        to="/profile"
+                                        className="block px-3 py-2 text-sm hover:bg-gray-50"
+                                    >
+                                        Profile
+                                    </Link>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                                    >
+                                        Logout
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
-
-                {/* Right actions */}
-                <div className="hidden md:flex items-center gap-4">
-                    <Link to="/cart" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600"><FaCartPlus /></Link>
-                    <Link to="/auth/login" className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg">Sign In</Link>
-                </div>
-
-                {/* Mobile toggle */}
-                <button className="md:hidden text-gray-800 dark:text-gray-100" onClick={() => setMobileOpen(!mobileOpen)}>
-                    {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-                </button>
             </div>
-
-            {/* Mobile panel */}
-            {mobileOpen && (
-                <div className="md:hidden bg-white dark:bg-zinc-950 border-t border-gray-200 dark:border-zinc-800 shadow-lg">
-                    <div className="p-4 space-y-1">
-                        {loading ? (
-                            <div className="space-y-2">
-                                <div className="h-4 w-32 bg-gray-200 dark:bg-zinc-800 rounded" />
-                                <div className="h-4 w-24 bg-gray-200 dark:bg-zinc-800 rounded" />
-                                <div className="h-4 w-20 bg-gray-200 dark:bg-zinc-800 rounded" />
-                            </div>
-                        ) : (
-                            categories.map((cat) => (
-                                <div key={cat.id} className="border-b border-gray-100 dark:border-zinc-800 pb-2">
-                                    {renderCategory(cat, 0)}
-                                </div>
-                            ))
-                        )}
-
-                        <div className="pt-3">
-                            <Link to="/cart" className="block py-2 font-medium text-gray-800 dark:text-gray-100"><FaCartPlus /></Link>
-                            <Link to="/login" className="block mt-2 w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg">Sign In</Link>
-                        </div>
-                    </div>
-                </div>
-            )}
         </nav>
     )
 }

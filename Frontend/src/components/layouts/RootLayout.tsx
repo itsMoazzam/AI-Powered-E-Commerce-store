@@ -1,52 +1,54 @@
-import React from "react"
-import { Outlet, Link, useLocation } from "react-router-dom"
+// import React from "react"
+import { Outlet } from "react-router-dom"
 import { motion } from "framer-motion"
-import {
-    ShoppingCart,
-    UserCircle2,
-    LayoutDashboard,
-    Package,
-    Store,
-} from "lucide-react"
+import CategoryGrid from "../Home/CategoryGrid"
+
+// import {
+//     ShoppingCart,
+//     UserCircle2,
+//     LayoutDashboard,
+//     Package,
+//     Store,
+// } from "lucide-react"
 import { Footer, FooterCopyright, FooterIcon, FooterLink, FooterLinkGroup, FooterTitle } from "flowbite-react";
 import { BsDribbble, BsFacebook, BsGithub, BsInstagram, BsTwitter } from "react-icons/bs";
 
 
-import { useSelector, useDispatch } from "react-redux"
-import type { RootState, AppDispatch } from "../../store"
-import { logout } from "../../store/auth"   // ✅ import logout action
+// import { useSelector, useDispatch } from "react-redux"
+// import type { RootState, AppDispatch } from "../../store"
+// import { logout } from "../../store/auth"   
 
-const NavLink = ({ to, children }: { to: string; children: React.ReactNode }) => {
-    const { pathname } = useLocation()
-    const active = pathname === to
-    return (
-        <Link
-            to={to}
-            className={`px-3 py-2 rounded-xl ${active
-                ? "bg-zinc-900 text-white"
-                : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                }`}
-        >
-            {children}
-        </Link>
-    )
-}
+// const NavLink = ({ to, children }: { to: string; children: React.ReactNode }) => {
+//     const { pathname } = useLocation()
+//     const active = pathname === to
+//     return (
+//         <Link
+//             to={to}
+//             className={`px-3 py-2 rounded-xl ${active
+//                 ? "bg-zinc-900 text-white"
+//                 : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+//                 }`}
+//         >
+//             {children}
+//         </Link>
+//     )
+// }
 
 export default function RootLayout() {
-    const dispatch = useDispatch<AppDispatch>()
+    // const dispatch = useDispatch<AppDispatch>()
 
     // ✅ get auth state from Redux
-    const { role } = useSelector((state: RootState) => state.auth)
+    // const { role } = useSelector((state: RootState) => state.auth)
 
-    // ✅ logout handler
-    const handleLogout = () => {
-        dispatch(logout())
-        location.href = "/login" // optional redirect
-    }
+    // // ✅ logout handler
+    // const handleLogout = () => {
+    //     dispatch(logout())
+    //     location.href = "/login" // optional redirect
+    // }
 
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-            <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-zinc-900/60 border-b border-zinc-200/60 dark:border-zinc-800">
+            {/* <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-zinc-900/60 border-b border-zinc-200/60 dark:border-zinc-800">
                 <div className="container flex items-center justify-between py-3 gap-4">
                     <Link to="/" className="flex items-center gap-2 font-semibold">
                         <Package className="w-5 h-5" /> IntelligentStore
@@ -71,8 +73,8 @@ export default function RootLayout() {
                         </button>
                     </nav>
                 </div>
-            </header>
-
+            </header> */}
+            <CategoryGrid />
             <motion.main
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -122,8 +124,8 @@ export default function RootLayout() {
                             </FooterLinkGroup>
                         </div>
                     </div>
-                    <div className="w-full bg-gray-700 px-4 py-6 sm:flex sm:items-center sm:justify-between">
-                        <FooterCopyright href="#" by="Flowbite™" year={2022} />
+                    <div className="w-full bg-gray-700 px-4 py-6 sm:flex sm:items-center sm:justify-between ">
+                        <FooterCopyright href="#" by="AI Powered Store" year={new Date().getFullYear()} />
                         <div className="mt-4 flex space-x-6 sm:mt-0 sm:justify-center">
                             <FooterIcon href="#" icon={BsFacebook} />
                             <FooterIcon href="#" icon={BsInstagram} />
