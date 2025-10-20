@@ -27,38 +27,21 @@ export default function SellerDashboard() {
 
     // load products (and other panels data if you want)
     useEffect(() => {
-        let mounted = true
-            ; (async () => {
-                try {
-                    // uncomment when backend exists:
-                    // const { data } = await api.get("/api/seller/products/")
-                    // if (mounted) setProducts(data)
+        let mounted = true;
+        (async () => {
 
-                    // demo fallback
-                    if (mounted) {
-                        setProducts([
-                            {
-                                id: 1,
-                                title: "Men's Running Shoes",
-                                price: 79.99,
-                                thumbnail:
-                                    "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80",
-                                model_3d: "",
-                            },
-                            {
-                                id: 2,
-                                title: "Smart Watch",
-                                price: 199.99,
-                                thumbnail:
-                                    "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=600&q=80",
-                                model_3d: "",
-                            },
-                        ])
-                    }
-                } catch (err) {
-                    console.error("Failed to load seller products", err)
-                }
-            })()
+            try {
+                console.log("token(localStorage) =>", localStorage.getItem("token"))
+                console.log("role(localStorage) =>", localStorage.getItem("role"))
+                // uncomment when backend exists:
+                const { data } = await api.get("/api/seller/products/")
+                if (mounted) setProducts(data)
+
+
+            } catch (err) {
+                console.error("Failed to load seller products", err.response ?? err)
+            }
+        })()
         return () => {
             mounted = false
         }
@@ -104,14 +87,13 @@ export default function SellerDashboard() {
                                 setView("edit")
                             }}
                             onDelete={handleDeleted}
-                            refresh={() => {
-                                // quick refresh: re-fetch backend when available
-                                // uncomment and implement when backend ready:
-                                // const { data } = await api.get("/api/seller/products/")
-                                // setProducts(data)
+                            refresh={async () => {
+                                const { data } = await api.get("/api/seller/products/")
+                                setProducts(data)
                             }}
                         />
                     )}
+
 
                     {view === "add" && <ProductForm onCreated={handleCreated} />}
 
