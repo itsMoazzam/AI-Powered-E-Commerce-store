@@ -36,21 +36,34 @@ export default function ProductCard({
             className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-100"
         >
 <<<<<<< HEAD
+<<<<<<< HEAD
             <Link to={`/product/${product.id}`} target="_blank">
                 {/* Image */}
 =======
             <Link to={`/product/${product.id}`}>
                 {/* --- Product Image --- */}
 >>>>>>> devMoazzam
+=======
+
+            <Link to={`/product/${product.id}`} target="_blank">
+                {/* Image */}
+
+>>>>>>> ca2b3e8ceabab9e74a8d48236511903245ff924f
                 <div className="relative">
                     <img
                         src={product.thumbnail}
                         alt={product.title}
 <<<<<<< HEAD
+<<<<<<< HEAD
                         className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-110"
 =======
                         className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-105"
 >>>>>>> devMoazzam
+=======
+
+                        className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-110"
+
+>>>>>>> ca2b3e8ceabab9e74a8d48236511903245ff924f
                         loading="lazy"
                     />
                     {product.discount && (
@@ -66,6 +79,10 @@ export default function ProductCard({
                 </div>
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+              
+>>>>>>> ca2b3e8ceabab9e74a8d48236511903245ff924f
                 {/* Info */}
                 <div className="p-4 space-y-1">
                     <h3 className="font-semibold text-gray-900 line-clamp-1">
@@ -77,6 +94,7 @@ export default function ProductCard({
                             ${Number(product.price).toFixed(2)}
 
                         </span>
+<<<<<<< HEAD
 =======
                 {/* --- Product Info --- */}
                 <div className="p-4 space-y-2">
@@ -93,6 +111,8 @@ export default function ProductCard({
                             </span>
                         )}
 >>>>>>> devMoazzam
+=======
+>>>>>>> ca2b3e8ceabab9e74a8d48236511903245ff924f
                     </div>
 
                     {/* --- Rating --- */}

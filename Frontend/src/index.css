@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 :root {
     overflow-y: scroll;
@@ -33,4 +34,16 @@
     box-shadow: 0 0 0 2px #6366f1;
     /* focus:ring-2 focus:ring-indigo-500 */
 >>>>>>> devMoazzam
+=======
+
+
+:root {
+    overflow-y: scroll;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+:root::-webkit-scrollbar {
+    display: none;
+>>>>>>> ca2b3e8ceabab9e74a8d48236511903245ff924f
 }
