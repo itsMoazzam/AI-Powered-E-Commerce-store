@@ -1,4 +1,8 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+>>>>>>> ca2b3e8ceabab9e74a8d48236511903245ff924f
 // src/components/ProductDetailPage.tsx
 import { useParams, Link } from "react-router-dom"
 import { useState, useEffect } from "react"
@@ -18,11 +22,14 @@ interface Seller {
     name: string
     logo: string
 }
+<<<<<<< HEAD
 =======
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Star } from "lucide-react"
 >>>>>>> devMoazzam
+=======
+>>>>>>> ca2b3e8ceabab9e74a8d48236511903245ff924f
 
 interface Product {
     id: number
@@ -43,6 +50,10 @@ interface Product {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+>>>>>>> ca2b3e8ceabab9e74a8d48236511903245ff924f
 export default function ProductDetailPage() {
     const { id } = useParams<{ id: string }>()
     const [product, setProduct] = useState<Product | null>(null)
@@ -100,14 +111,21 @@ export default function ProductDetailPage() {
         : basePrice
     const discountAmount = hasDiscount ? basePrice - discountedPrice : 0
 
+<<<<<<< HEAD
 =======
 export default function ProductCard({ product, index }: { product: Product; index: number }) {
 >>>>>>> devMoazzam
+=======
+>>>>>>> ca2b3e8ceabab9e74a8d48236511903245ff924f
     return (
         <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+>>>>>>> ca2b3e8ceabab9e74a8d48236511903245ff924f
             transition={{ duration: 0.4 }}
             className="bg-white"
         >
@@ -133,6 +151,7 @@ export default function ProductCard({ product, index }: { product: Product; inde
                         <li className="text-gray-900 font-medium">{product.title}</li>
                     </ol>
                 </nav>
+<<<<<<< HEAD
 =======
             transition={{ delay: index * 0.05 }}
             className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-100"
@@ -186,6 +205,8 @@ export default function ProductCard({ product, index }: { product: Product; inde
                                         </div>
                                     )}
 >>>>>>> devMoazzam
+=======
+>>>>>>> ca2b3e8ceabab9e74a8d48236511903245ff924f
 
                 {/* 🔹 Product layout */}
                 <div className="mx-auto mt-6 max-w-7xl grid grid-cols-1 lg:grid-cols-3 gap-10 px-4 sm:px-6 lg:px-8">
@@ -224,6 +245,7 @@ export default function ProductCard({ product, index }: { product: Product; inde
                             </div>
                         ) : null}
                     </div>
+
 
                     {/* --- Right: Info Panel --- */}
                     <div>
@@ -319,6 +341,9 @@ export default function ProductCard({ product, index }: { product: Product; inde
                         </div>
                     </div>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> ca2b3e8ceabab9e74a8d48236511903245ff924f
                 </div>
 
                 {/* 🔹 Reviews Section */}
@@ -332,6 +357,7 @@ export default function ProductCard({ product, index }: { product: Product; inde
                     </div>
                 </div>
             </div>
+<<<<<<< HEAD
 =======
                 )}
 
@@ -364,6 +390,8 @@ export default function ProductCard({ product, index }: { product: Product; inde
                 </div>
             </Link>
 >>>>>>> devMoazzam
+=======
+>>>>>>> ca2b3e8ceabab9e74a8d48236511903245ff924f
         </motion.div>
     )
 }
