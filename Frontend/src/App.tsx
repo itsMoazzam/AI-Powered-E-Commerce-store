@@ -2,7 +2,8 @@ import React, { Suspense, lazy } from 'react'
 import { Route, Routes, Navigate } from 'react-router-dom'
 import RootLayout from './components/layouts/RootLayout'
 import AuthLayout from './components/layouts/AuthLayout'
-import { setAuth } from './store/auth'
+// import { setAuth } from './store/auth'
+import Protected from './components/Protected'
 // import Navbar from './components/Navbar'
 import Register from './pages/auth/register/Register'
 
@@ -16,12 +17,7 @@ const SellerDashboard = lazy(() => import('./pages/seller/SellerDashboard'))
 const Login = lazy(() => import('./pages/auth/Login'))
 
 
-function Protected({ children, allow }: { children: React.ReactNode; allow?: Array<'customer' | 'seller' | 'admin'> }) {
-  const { token, role } = setAuth()
-  if (!token) return <Navigate to="/auth/login" replace />
-  if (allow && role && !allow.includes(role)) return <Navigate to="/" replace />
-  return <>{children}</>
-}
+
 
 
 function App() {
@@ -41,8 +37,8 @@ function App() {
           {/* <Route path="/checkout" element={<Protected allow={['customer']}><Checkout /></Protected>} /> */}
           {/* <Route path="/admin" element={<Protected allow={['admin']}><AdminPanel /></Protected>} /> */}
           <Route path="/admin" element={<AdminPanel />} />
-          {/* <Route path="/seller" element={<Protected allow={['seller']}><SellerDashboard /></Protected>} /> */}
-          <Route path="/seller" element={<SellerDashboard />} />
+          <Route path="/seller" element={<Protected allow={['seller']}><SellerDashboard /></Protected>} />
+          {/* <Route path="/seller" element={<SellerDashboard />} /> */}
 
         </Route>
         <Route path="/auth" element={<AuthLayout />}>

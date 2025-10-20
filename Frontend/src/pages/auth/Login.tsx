@@ -3,39 +3,61 @@ import api from "../../lib/api"
 import { useDispatch } from "react-redux"
 import type { AppDispatch } from "../../store"
 import { setAuth } from "../../store/auth"
+// import { User } from "lucide-react"
 
 export default function Login() {
     const dispatch = useDispatch<AppDispatch>()
-    const [email, setEmail] = useState("")
+    const [username, setusername] = useState("")
     const [password, setPassword] = useState("")
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
 
+    // inside Login component
     async function submit(e: React.FormEvent) {
         e.preventDefault()
         setLoading(true)
         setError("")
         try {
-            const { data } = await api.post("/api/auth/login/", { email, password })
+            const { data } = await api.post("/api/auth/login/", { username, password })
+            console.log("LOGIN RESPONSE:", data)
 
+            // Defensive reads
+            const token = data?.access ?? data?.token ?? null
+            const user = data?.user ?? null
+            const role = user?.role ?? data?.role ?? null
+
+            if (!token || !user) {
+                // Something returned but required fields missing
+                setError("Login succeeded but server response was unexpected. Please try again.")
+                // helpful debug line
+                console.error("Login response missing token or user:", data)
+                setLoading(false)
+                return
+            }
+
+            // Save in Redux and localStorage using the robust setAuth reducer
             dispatch(setAuth({
-                token: data.token,
-                role: data.role,
-                user: data.user,
+                token,
+                role,
+                user,
             }))
 
-            location.href =
-                data.role === "admin"
-                    ? "/admin"
-                    : data.role === "seller"
-                        ? "/seller-dashboard"
-                        : "/"
-        } catch {
-            setError("Invalid email or password. Please try again.")
+            // Redirect immediately based on role/superuser (use user.is_superuser first)
+            if (user?.is_superuser) {
+                location.href = "/admin"
+            } else if (role === "seller") {
+                location.href = "/seller"
+            } else {
+                location.href = "/profile"
+            }
+        } catch (err) {
+            console.error("Login error:", err)
+            setError("Invalid username or password. Please try again.")
         } finally {
             setLoading(false)
         }
     }
+
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-purple-700 to-indigo-800 dark:from-zinc-900 dark:via-zinc-950 dark:to-black px-4">
@@ -49,11 +71,11 @@ export default function Login() {
 
                 <form onSubmit={submit} className="space-y-5">
                     <div>
-                        <label className="block text-sm text-zinc-200 mb-1">Email</label>
+                        <label className="block text-sm text-zinc-200 mb-1">username</label>
                         <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            type="text"
+                            value={username}
+                            onChange={(e) => setusername(e.target.value)}
                             placeholder="you@example.com"
                             className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-zinc-400 transition-all"
                             required
