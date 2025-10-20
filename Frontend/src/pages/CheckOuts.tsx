@@ -1,6 +1,6 @@
 import { useState } from "react"
 import api from "../lib/api"
-import { Loader2, CreditCard, MapPin, Truck, CheckCircle2, ShoppingBag } from "lucide-react"
+import { Loader2, CreditCard, ShoppingBag } from "lucide-react"
 
 type Address = {
     first_name?: string
