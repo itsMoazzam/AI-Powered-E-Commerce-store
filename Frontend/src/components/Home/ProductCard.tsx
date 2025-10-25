@@ -27,7 +27,7 @@ export default function ProductCard({
             transition={{ delay: index * 0.05 }}
             className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-100"
         >
-            <Link to={`/product/${product.id}`} target="_blank">
+            <Link to={`/product/${product.id}`} >
                 {/* Image */}
                 <div className="relative">
                     <img
@@ -44,6 +44,7 @@ export default function ProductCard({
                     {product.has3d && (
                         <span className="absolute bottom-2 right-2 bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-md shadow">
                             3D
+
                         </span>
                     )}
                 </div>

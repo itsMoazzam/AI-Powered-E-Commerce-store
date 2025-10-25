@@ -32,7 +32,7 @@ export default function SellerSidebar({ view, setView, productCount }: SellerSid
 
             {/* --- Sidebar --- */}
             <aside
-                className={`fixed lg:static top-0 left-0 h-full lg:h-auto bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 p-6 flex flex-col w-72 lg:w-80 z-50 transform transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+                className={`fixed lg:static top-0 left-0 h-full lg:h-auto bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 p-6 flex flex-col w-72 lg:w-80  transform transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
                     }`}
             >
                 <div className="mb-6 hidden lg:block">

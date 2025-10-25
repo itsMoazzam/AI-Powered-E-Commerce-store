@@ -1,3 +1,4 @@
+// src/components/Product3DPreview.tsx
 import { Canvas } from "@react-three/fiber"
 import { OrbitControls, Environment, useGLTF } from "@react-three/drei"
 import { Suspense, useState, useEffect } from "react"
@@ -5,6 +6,8 @@ import { Suspense, useState, useEffect } from "react"
 interface Product3DPreviewProps {
     url: string
 }
+
+const BASE_URL = "http://127.0.0.1:8000" // 👈 update to your backend URL
 
 function Model({ url }: { url: string }) {
     const { scene } = useGLTF(url)
@@ -21,15 +24,15 @@ export default function Product3DPreview({ url }: Product3DPreviewProps) {
             return
         }
 
-        // Auto-detect if URL ends with .glb or .gltf
-        const lower = url.toLowerCase()
+        // Build full backend URL if needed
+        const fullUrl = url.startsWith("http") ? url : `${BASE_URL}${url}`
+        const lower = fullUrl.toLowerCase()
+
         if (lower.endsWith(".glb") || lower.endsWith(".gltf")) {
-            setValidUrl(url)
+            setValidUrl(fullUrl)
             setError(null)
         } else {
-            // Try appending .glb if missing extension
-            const fallback = url.includes("?") ? `${url.split("?")[0]}.glb` : `${url}.glb`
-            setValidUrl(fallback)
+            setError("Invalid 3D model file type.")
         }
     }, [url])
 
@@ -55,6 +58,7 @@ export default function Product3DPreview({ url }: Product3DPreviewProps) {
                     <directionalLight position={[5, 5, 5]} intensity={1.2} />
                     <Environment preset="studio" />
                     <OrbitControls enableZoom={true} autoRotate autoRotateSpeed={1.5} />
+
                     {validUrl ? (
                         <ErrorBoundary onError={() => setError("Failed to load 3D model.")}>
                             <Model url={validUrl} />
@@ -84,9 +88,7 @@ function ErrorBoundary({
         if (hasError) onError()
     }, [hasError, onError])
 
-    return hasError ? null : (
-        <>{children}</>
-    )
+    return hasError ? null : <>{children}</>
 }
 
 // Optional preload (safe ESLint)
