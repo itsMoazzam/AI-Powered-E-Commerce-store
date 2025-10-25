@@ -24,7 +24,13 @@ export default function ProductGrid() {
             try {
                 setLoading(true)
                 const response = await api.get("/api/products/") // ✅ Django REST endpoint
-                setProducts(response.data)
+                console.log(response.data)
+                const formattedProducts = response.data.map((p: any) => ({
+                    ...p,
+                    has3d: Boolean(p.model_3d), // 👈 derive has3d flag from model_3d
+                }))
+
+                setProducts(formattedProducts)
             } catch (err) {
                 console.error("Error fetching products:", err)
                 setError("Failed to load products. Please try again later.")

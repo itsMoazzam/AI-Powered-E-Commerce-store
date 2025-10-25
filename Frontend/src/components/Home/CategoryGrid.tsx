@@ -1,124 +1,109 @@
-// src/components/CategoryNavbar.tsx
-import { useEffect, useState, useRef } from "react"
-import { Link } from "react-router-dom"
-import { Menu, X, ChevronRight } from "lucide-react"
-import { FaShoppingCart, FaSearch, FaHeart } from "react-icons/fa"
-import { RxCross2 } from "react-icons/rx"
-import Cart from "./Cart"
+import { useEffect, useState, useRef } from "react";
+import { Link } from "react-router-dom";
+import { Menu, X } from "lucide-react";
+import { FaShoppingCart, FaSearch, FaHeart } from "react-icons/fa";
+import { RxCross2 } from "react-icons/rx";
+import Cart from "./Cart";
+import api from "../../lib/api";
+import Tooltip from '@mui/material/Tooltip';
+import Box from '@mui/material/Box';
+import type { Instance } from '@popperjs/core';
 
-type RawCategory = {
-    id: number
-    name: string
-    slug?: string
-    parent?: number | null
-    children?: RawCategory[]
-}
+type Category = {
+    id: number;
+    name: string;
+    slug?: string;
+    children?: Category[];
+};
 
-export default function CategoryNavbar() {
-    const [categories, setCategories] = useState<RawCategory[]>([])
-    const [hoveredCategory, setHoveredCategory] = useState<RawCategory | null>(null)
-    const [cartOpen, setCartOpen] = useState(false)
-    const [userMenuOpen, setUserMenuOpen] = useState(false)
-    const [user, setUser] = useState<{ username?: string; avatar?: string } | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [searchQuery, setSearchQuery] = useState("")
-    const [menuOpen, setMenuOpen] = useState(false)
-    const [menuHovered, setMenuHovered] = useState(false)
-    const [hoverPath, setHoverPath] = useState<number[]>([])
-    const menuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+export default function CategoryGrid() {
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [hoveredCategory, setHoveredCategory] = useState<Category | null>(null);
+    const [cartOpen, setCartOpen] = useState(false);
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [user, setUser] = useState<{ username?: string; avatar?: string } | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [menuHovered, setMenuHovered] = useState(false);
+    const [hoverPath, setHoverPath] = useState<number[]>([]);
+    const menuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const positionRef = useRef<{ x: number; y: number }>({
+        x: 0,
+        y: 0,
+    });
+    const popperRef = useRef<Instance>(null);
+    const areaRef = useRef<HTMLDivElement>(null);
 
+    const handleMouseMove = (event: React.MouseEvent) => {
+        positionRef.current = { x: event.clientX, y: event.clientY };
+
+        if (popperRef.current != null) {
+            popperRef.current.update();
+        }
+    };
+    // Fetch categories from backend
     useEffect(() => {
-        const demo: RawCategory[] = [
-            {
-                id: 1,
-                name: "Men",
-                slug: "men",
-                children: [
-                    {
-                        id: 11,
-                        name: "Clothing",
-                        slug: "clothing",
-                        children: [
-                            { id: 111, name: "T-Shirts", slug: "t-shirts" },
-                            { id: 112, name: "Jeans", slug: "jeans" },
-                        ],
-                    },
-                    { id: 12, name: "Shoes", slug: "shoes" },
-                    { id: 13, name: "Accessories", slug: "accessories" },
-                ],
-            },
-            {
-                id: 2,
-                name: "Women",
-                slug: "women",
-                children: [
-                    { id: 21, name: "Clothing", slug: "clothing-women" },
-                    { id: 22, name: "Handbags", slug: "handbags" },
-                    { id: 23, name: "Jewelry", slug: "jewelry" },
-                ],
-            },
-            { id: 3, name: "Electronics", slug: "electronics" },
-            { id: 4, name: "Home & Furniture", slug: "home-furniture" },
-            { id: 5, name: "Offers", slug: "offers" },
-        ]
-        setCategories(demo)
-        setLoading(false)
+        api.get("/api/products/categories/")
+            .then(res => {
+                console.log("Categories response:", res.data);
+                setCategories(res.data);
+            })
+            .catch(console.error)
+            .finally(() => setLoading(false));
 
+        // Load user from localStorage
         try {
-            const raw = localStorage.getItem("user")
+            const raw = localStorage.getItem("user");
             if (raw) {
-                const parsed = JSON.parse(raw)
+                const parsed = JSON.parse(raw);
                 setUser({
                     username: parsed.username || parsed.email || "User",
                     avatar: parsed.profile_photo || "",
-                })
+                });
             }
         } catch {
-            // ignore parsing errors
+            //ignore
         }
-    }, [])
+    }, []);
 
-    function handleCartToggle() {
-        setCartOpen(!cartOpen)
-    }
+    const handleCartToggle = () => setCartOpen(!cartOpen);
 
-    function handleLogout() {
-        localStorage.removeItem("token")
-        localStorage.removeItem("user")
-        setUser(null)
-        window.location.href = "/"
-    }
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setUser(null);
+        window.location.href = "/";
+    };
 
-    function handleSearch(e: React.FormEvent) {
-        e.preventDefault()
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
         if (searchQuery.trim()) {
-            window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`
+            window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`;
         }
-    }
+    };
 
-    const openMenu = menuHovered || menuOpen
+    const openMenu = menuHovered || menuOpen;
 
-    // Helper to clear close timeout
     const clearMenuTimeout = () => {
-        if (menuTimeout.current) clearTimeout(menuTimeout.current)
-    }
+        if (menuTimeout.current) clearTimeout(menuTimeout.current);
+    };
 
-    // Helper to close with delay
     const delayedCloseMenu = () => {
-        clearMenuTimeout()
+        clearMenuTimeout();
         menuTimeout.current = setTimeout(() => {
-            setMenuHovered(false)
-            setHoveredCategory(null)
-            setHoverPath([])
-        }, 800) // smoother close
-    }
+            setMenuHovered(false);
+            setHoveredCategory(null);
+            setHoverPath([]);
+        }, 800);
+    };
 
     return (
-        <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-            <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between h-16 gap-4">
+        <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 w-full">
+            <div className="w-full px-4 md:px-6 lg:px-10 flex items-center justify-between h-16 gap-4">
 
                 {/* Left side: Logo + Hamburger */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-2 text-2xl font-extrabold text-gray-900">
                         <img
@@ -127,26 +112,50 @@ export default function CategoryNavbar() {
                             width={45}
                             className="rounded-full"
                         />
-                        <p>
-                            <b className="text-red-500">AI</b>
-                            <small className="text-green-500">Powered</small>{" "}
-                            <i className="text-blue-500">Store</i>
-                        </p>
+
+                        <Tooltip
+                            title="Intelligent E-commerce Store"
+                            placement="top"
+                            arrow
+                            slotProps={{
+                                popper: {
+                                    popperRef,
+                                    anchorEl: {
+                                        getBoundingClientRect: () => {
+                                            return new DOMRect(
+                                                positionRef.current.x,
+                                                areaRef.current!.getBoundingClientRect().y,
+                                                0,
+                                                20,
+                                            );
+                                        },
+                                    },
+                                },
+                            }}
+                        >
+
+                            <Box ref={areaRef}
+                                onMouseMove={handleMouseMove}>
+                                <b className="text-red-500">I</b>
+                                <b className="text-green-500">E</b>
+                                <b className="text-blue-500">S</b>
+                            </Box>
+                        </Tooltip>
+
                     </Link>
 
-                    {/* Hamburger */}
+                    {/* Hamburger / Categories */}
                     <div
                         className="relative"
                         onMouseEnter={() => {
-                            clearMenuTimeout()
-                            setMenuHovered(true)
+                            clearMenuTimeout();
+                            setMenuHovered(true);
                         }}
                         onMouseLeave={delayedCloseMenu}
                     >
                         <button
                             onClick={() => setMenuOpen(!menuOpen)}
-                            className="p-1 rounded-md text-blue-500 hover:bg-gray-100 transition flex flex-row items-center gap-1"
-                            aria-label="Categories Menu"
+                            className="p-1 rounded-md text-blue-500 hover:bg-gray-100 transition flex items-center gap-1 font-medium"
                         >
                             {openMenu ? <X size={22} /> : <Menu size={22} />}
                             Categories
@@ -155,21 +164,21 @@ export default function CategoryNavbar() {
                         {/* Dropdown */}
                         {openMenu && (
                             <div
-                                className="absolute top-full left-0 w-60 bg-white shadow-lg border rounded-md mt-2 z-50"
+                                className="absolute top-full left-0 w-64 bg-white shadow-lg border rounded-md mt-2 z-50"
                                 onMouseEnter={clearMenuTimeout}
                                 onMouseLeave={delayedCloseMenu}
                             >
                                 {loading ? (
                                     <div className="p-3 text-sm text-gray-500">Loading...</div>
                                 ) : (
-                                    categories.map((cat) => (
+                                    categories.map(cat => (
                                         <div
                                             key={cat.id}
                                             className="relative group"
                                             onMouseEnter={() => {
-                                                clearMenuTimeout()
-                                                setHoveredCategory(cat)
-                                                setHoverPath([cat.id])
+                                                clearMenuTimeout();
+                                                setHoveredCategory(cat);
+                                                setHoverPath([cat.id]);
                                             }}
                                             onMouseLeave={delayedCloseMenu}
                                         >
@@ -178,24 +187,24 @@ export default function CategoryNavbar() {
                                                 className="flex justify-between items-center px-4 py-2 hover:bg-gray-50 text-gray-800 text-sm font-medium"
                                             >
                                                 {cat.name}
-                                                {cat.children && <ChevronRight size={14} />}
+                                                {cat.children && ""}
                                             </Link>
 
-                                            {/* Subcategory Flyout */}
+                                            {/* Subcategories Flyout */}
                                             {hoverPath.includes(cat.id) && cat.children && (
                                                 <div
                                                     className="absolute top-0 left-full w-56 bg-white shadow-md border rounded-md ml-1"
                                                     onMouseEnter={clearMenuTimeout}
                                                     onMouseLeave={delayedCloseMenu}
                                                 >
-                                                    {cat.children.map((child) => (
+                                                    {cat.children.map(child => (
                                                         <div
                                                             key={child.id}
                                                             className="relative group"
                                                             onMouseEnter={() => {
-                                                                clearMenuTimeout()
-                                                                setHoveredCategory(child)
-                                                                setHoverPath([cat.id, child.id])
+                                                                clearMenuTimeout();
+                                                                setHoveredCategory(child);
+                                                                setHoverPath([cat.id, child.id]);
                                                             }}
                                                             onMouseLeave={delayedCloseMenu}
                                                         >
@@ -204,17 +213,16 @@ export default function CategoryNavbar() {
                                                                 className="flex justify-between items-center px-4 py-2 hover:bg-gray-50 text-gray-700 text-sm"
                                                             >
                                                                 {child.name}
-                                                                {child.children && <ChevronRight size={12} />}
+                                                                {child.children && ""}
                                                             </Link>
 
-                                                            {/* Nested Child */}
                                                             {hoverPath.includes(child.id) && child.children && (
                                                                 <div
                                                                     className="absolute top-0 left-full w-52 bg-white shadow-md border rounded-md ml-1"
                                                                     onMouseEnter={clearMenuTimeout}
                                                                     onMouseLeave={delayedCloseMenu}
                                                                 >
-                                                                    {child.children.map((sub) => (
+                                                                    {child.children.map(sub => (
                                                                         <Link
                                                                             key={sub.id}
                                                                             to={`/category/${sub.slug}`}
@@ -246,7 +254,7 @@ export default function CategoryNavbar() {
                         type="text"
                         placeholder="Search products..."
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={e => setSearchQuery(e.target.value)}
                         className="flex-1 bg-transparent outline-none text-sm px-2 text-gray-800"
                     />
                     <button
@@ -260,7 +268,6 @@ export default function CategoryNavbar() {
 
                 {/* Right side: Wishlist + Cart + User */}
                 <div className="flex items-center gap-4">
-                    {/* Wishlist */}
                     <Link
                         to="/wishlist"
                         className="p-2 text-pink-500 rounded-md hover:bg-gray-100"
@@ -296,7 +303,7 @@ export default function CategoryNavbar() {
                         )}
                     </div>
 
-                    {/* User Menu */}
+                    {/* User */}
                     {!user ? (
                         <Link
                             to="/auth/login"
@@ -307,16 +314,12 @@ export default function CategoryNavbar() {
                     ) : (
                         <div className="relative">
                             <button
-                                onClick={() => setUserMenuOpen((s) => !s)}
+                                onClick={() => setUserMenuOpen(s => !s)}
                                 className="flex items-center gap-2 px-3 py-1 rounded-full hover:bg-gray-100"
                             >
                                 <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-medium">
                                     {user.avatar ? (
-                                        <img
-                                            src={user.avatar}
-                                            alt="avatar"
-                                            className="w-full h-full object-cover rounded-full"
-                                        />
+                                        <img src={user.avatar} alt="avatar" className="w-full h-full object-cover rounded-full" />
                                     ) : (
                                         (user.username || "U")[0].toUpperCase()
                                     )}
@@ -326,24 +329,14 @@ export default function CategoryNavbar() {
 
                             {userMenuOpen && (
                                 <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-md py-2">
-                                    <Link
-                                        to="/profile"
-                                        className="block px-3 py-2 text-sm hover:bg-gray-50"
-                                    >
-                                        Profile
-                                    </Link>
-                                    <button
-                                        onClick={handleLogout}
-                                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                                    >
-                                        Logout
-                                    </button>
+                                    <Link to="/profile" className="block px-3 py-2 text-sm hover:bg-gray-50">Profile</Link>
+                                    <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Logout</button>
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
             </div>
-        </nav>
-    )
+        </nav >
+    );
 }

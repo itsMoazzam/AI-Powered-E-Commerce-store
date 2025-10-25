@@ -12,7 +12,7 @@
     display: none;
 }
 
-.input-field {
+.input {
     border: 1px solid #d1d5db;
     /* border-gray-300 */
     border-radius: 0.75rem;
@@ -28,7 +28,7 @@
     transition: box-shadow 0.2s, border-color 0.2s;
 }
 
-.input-field:focus {
+.input:focus {
     border-color: #6366f1;
     /* ring-indigo-500 */
     box-shadow: 0 0 0 2px #6366f1;
