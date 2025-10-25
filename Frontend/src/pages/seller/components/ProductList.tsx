@@ -1,8 +1,10 @@
 // src/pages/seller/components/ProductList.tsx
 import { useEffect, useState } from "react"
-import { Eye } from "lucide-react"
+import { Eye, Edit3 } from "lucide-react"
 import Product3DPreview from "./Product3DPreview"
 import api from "../../../lib/api"
+import ProductForm from "./ProductForm"
+import ProductEditModal from "./ProductEditModal"
 
 interface Product {
     id: number
@@ -18,6 +20,7 @@ export default function ProductList() {
     const [preview, setPreview] = useState<Product | null>(null)
     const [busyId, setBusyId] = useState<number | null>(null)
     const [loading, setLoading] = useState(true)
+    const [editProduct, setEditProduct] = useState<Product | null>(null)
 
     async function fetchProducts() {
         try {
@@ -34,6 +37,22 @@ export default function ProductList() {
     useEffect(() => {
         fetchProducts()
     }, [])
+
+    async function handleUpdate(id: number, formData: FormData) {
+        try {
+            setBusyId(id)
+            const res = await api.put(`/api/seller/products/${id}/`, formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            })
+            setProducts(products.map(p => (p.id === id ? res.data : p)))
+            setEditProduct(null)
+        } catch (err) {
+            console.error("❌ Update failed:", err)
+            alert("Failed to update product.")
+        } finally {
+            setBusyId(null)
+        }
+    }
 
     async function removeProduct(id: number) {
         if (!confirm("Delete this product? This action cannot be undone.")) return
@@ -82,13 +101,22 @@ export default function ProductList() {
 
                             <div className="mt-3 flex items-start justify-between gap-3">
                                 <div className="flex-1">
-                                    <div className="font-semibold text-zinc-900 truncate">{p.title}</div>
+                                    <div className="font-semibold text-zinc-900 ">{p.title}</div>
                                     <div className="text-sm text-zinc-500">
-                                        ${typeof p.price === "number" ? p.price.toFixed(2) : Number(p.price || 0).toFixed(2)}
+                                        ${typeof p.price === "number"
+                                            ? p.price.toFixed(2)
+                                            : Number(p.price || 0).toFixed(2)}
                                     </div>
                                 </div>
 
                                 <div className="flex flex-col items-end gap-2">
+                                    <button
+                                        onClick={() => setEditProduct(p)}
+                                        className="text-sm px-3 py-1 rounded-md border text-blue-600 hover:bg-blue-50 transition border-blue-200 flex items-center gap-1"
+                                    >
+                                        <Edit3 size={14} /> Edit
+                                    </button>
+
                                     <button
                                         onClick={() => removeProduct(p.id)}
                                         disabled={busyId === p.id}
@@ -99,6 +127,7 @@ export default function ProductList() {
                                     >
                                         {busyId === p.id ? "Deleting..." : "Delete"}
                                     </button>
+
                                     {p.model_3d && (
                                         <button
                                             onClick={() => setPreview(p)}
@@ -114,6 +143,7 @@ export default function ProductList() {
                 </div>
             )}
 
+            {/* 🔵 3D Preview Modal */}
             {preview && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
                     <div className="w-full max-w-4xl bg-white rounded-2xl overflow-hidden shadow-lg animate-fadeIn">
@@ -131,6 +161,16 @@ export default function ProductList() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* 🟢 Edit Modal (fixed placement) */}
+            {editProduct && (
+                <ProductEditModal onClose={() => setEditProduct(null)}>
+                    <ProductForm
+                        initialData={editProduct}
+                        onCreated={(formData) => handleUpdate(editProduct.id, formData)}
+                    />
+                </ProductEditModal>
             )}
         </section>
     )
