@@ -87,10 +87,10 @@ export default function ProductList() {
                             <div className="relative">
 
                                 <img
-                                    src={p.thumbnail || p.image || `/placeholder.jpg`}
+                                    src={p.thumbnail || `/placeholder.jpg`}
 
                                     alt={p.title}
-                                    onError={(e) => (e.currentTarget.src = "/placeholder.jpg")}
+                                    // onError={(e) => (e.currentTarget.src = "/placeholder.jpg")}
                                     className="w-full h-44 object-cover rounded-md"
                                 />
                                 {p.model_3d && (
