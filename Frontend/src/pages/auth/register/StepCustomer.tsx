@@ -21,7 +21,7 @@ const StepCustomer: React.FC<Props> = ({ form, onChange }) => {
         <div className="space-y-6">
             <h2 className="text-lg font-semibold text-gray-800">Customer Information</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ">
                 <input
                     className="input-field"
                     placeholder="Age"
