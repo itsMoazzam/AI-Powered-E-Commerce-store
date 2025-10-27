@@ -2,8 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { FaShoppingCart, FaSearch, FaHeart } from "react-icons/fa";
-import { RxCross2 } from "react-icons/rx";
-import Cart from "./Cart";
+// import { RxCross2 } from "react-icons/rx";
+import CartDrawer from "./Cart";
 import api from "../../lib/api";
 import Tooltip from '@mui/material/Tooltip';
 import Box from '@mui/material/Box';
@@ -285,22 +285,8 @@ export default function CategoryGrid() {
                         >
                             <FaShoppingCart size={18} />
                         </button>
-                        {cartOpen && (
-                            <div className="absolute right-0 mt-2 w-96 bg-white border rounded-lg shadow-lg p-4 z-50">
-                                <div className="flex justify-between items-start">
-                                    <h3 className="text-sm font-medium">Your Cart</h3>
-                                    <button
-                                        onClick={() => setCartOpen(false)}
-                                        className="p-1 rounded hover:bg-gray-200"
-                                    >
-                                        <RxCross2 />
-                                    </button>
-                                </div>
-                                <div className="mt-3">
-                                    <Cart />
-                                </div>
-                            </div>
-                        )}
+                        <CartDrawer open={cartOpen} setOpen={setCartOpen} />
+
                     </div>
 
                     {/* User */}

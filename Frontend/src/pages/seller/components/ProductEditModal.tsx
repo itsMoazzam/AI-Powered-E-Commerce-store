@@ -2,11 +2,11 @@
 
 export default function ProductEditModal({ children, onClose }: any) {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-50 flex  justify-center bg-black/80 p-4">
             <div className="bg-white rounded-2xl w-full max-w-3xl overflow-auto">
                 <div className="p-4 border-b flex items-center justify-between">
-                    <div className="font-semibold">Edit Product</div>
-                    <button onClick={onClose} className="px-3 py-1">Close</button>
+                    <div className="font-semibold text-gray-600">Edit Product</div>
+                    <button onClick={onClose} className="px-3 py-1 text-gray-600">Close</button>
                 </div>
                 <div className="p-4">{children}</div>
             </div>
