@@ -71,7 +71,6 @@ export default function ProductList() {
     if (loading) {
         return <div className="text-center py-10 text-zinc-500">Loading products...</div>
     }
-
     return (
         <section className="grid gap-4">
             {products.length === 0 ? (
@@ -86,8 +85,10 @@ export default function ProductList() {
                             className="bg-white rounded-2xl p-4 shadow-sm border border-zinc-100 transition hover:shadow-md"
                         >
                             <div className="relative">
+
                                 <img
-                                    src={p.thumbnail || p.image || "/placeholder.jpg"}
+                                    src={p.thumbnail || p.image || `/placeholder.jpg`}
+
                                     alt={p.title}
                                     onError={(e) => (e.currentTarget.src = "/placeholder.jpg")}
                                     className="w-full h-44 object-cover rounded-md"
@@ -148,10 +149,10 @@ export default function ProductList() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
                     <div className="w-full max-w-4xl bg-white rounded-2xl overflow-hidden shadow-lg animate-fadeIn">
                         <div className="p-4 flex items-center justify-between border-b">
-                            <div className="font-semibold">{preview.title} — 3D Preview</div>
+                            <div className="font-semibold text-gray-700 capitalize">{preview.title} — 3D Preview</div>
                             <button
                                 onClick={() => setPreview(null)}
-                                className="text-sm px-3 py-1 rounded-md hover:bg-zinc-100"
+                                className="text-sm px-3 py-1 text-gray-500 bg-zinc-100 rounded-md hover:bg-zinc-200"
                             >
                                 Close
                             </button>

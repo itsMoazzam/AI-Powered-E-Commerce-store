@@ -4,43 +4,54 @@ import { Link } from "react-router-dom"
 import { Trash2, Plus, Minus, ShoppingBag, Truck, ShieldCheck } from "lucide-react"
 
 type CartItem = {
-    id: number | string
+    id: number
     title: string
     thumbnail: string
     price: number
     qty: number
+    subtotal: number
+}
+
+type CartData = {
+    items: CartItem[]
+    total: number
+    shipping: number
+    grand_total: number
 }
 
 export default function Cart() {
-    const [items, setItems] = useState<CartItem[]>([])
+    const [cart, setCart] = useState<CartData | null>(null)
     const [loading, setLoading] = useState(true)
+    const [updating, setUpdating] = useState<number | null>(null)
 
-    useEffect(() => {
-        (async () => {
-            try {
-                const { data } = await api.get("/api/cart/")
-                setItems(data.items || [])
-            } catch (err) {
-                console.error("Failed to load cart", err)
-            } finally {
-                setLoading(false)
-            }
-        })()
-    }, [])
-
-    const total = items.reduce((sum, i) => sum + i.price * i.qty, 0)
-
-    async function removeItem(id: number | string) {
-        await api.delete(`/api/cart/${id}/`)
-        setItems((s) => s.filter((x) => x.id !== id))
+    async function fetchCart() {
+        try {
+            const { data } = await api.get("/api/cart/")
+            setCart(data)
+        } catch (err) {
+            console.error("Failed to fetch cart", err)
+        } finally {
+            setLoading(false)
+        }
     }
 
-    async function updateQty(id: number | string, newQty: number) {
-        if (newQty < 1) return
-        await api.patch(`/api/cart/${id}/`, { qty: newQty })
-        setItems((s) =>
-            s.map((x) => (x.id === id ? { ...x, qty: newQty } : x))
-        )
+    useEffect(() => {
+        fetchCart()
+    }, [])
+
+    async function updateQty(id: number, qty: number) {
+        if (qty < 1) return
+        setUpdating(id)
+        await api.patch(`/api/cart/${id}/`, { qty })
+        await fetchCart()
+        setUpdating(null)
+    }
+
+    async function removeItem(id: number) {
+        setUpdating(id)
+        await api.delete(`/api/cart/${id}/`)
+        await fetchCart()
+        setUpdating(null)
     }
 
     if (loading)
@@ -50,7 +61,7 @@ export default function Cart() {
             </div>
         )
 
-    if (items.length === 0)
+    if (!cart || cart.items.length === 0)
         return (
             <div className="flex flex-col items-center justify-center h-[70vh] text-center">
                 <ShoppingBag className="w-16 h-16 text-zinc-400 mb-4" />
@@ -69,34 +80,32 @@ export default function Cart() {
 
     return (
         <div className="container mx-auto px-4 py-10 grid md:grid-cols-3 gap-8">
-            {/* Cart Items Section */}
-            <div className="md:col-span-2 bg-white rounded-2xl shadow-md border border-zinc-100 p-6">
+            {/* Items */}
+            <div className="md:col-span-2 bg-white rounded-2xl shadow-sm border border-zinc-100 p-6">
                 <h2 className="text-2xl font-semibold mb-4 text-gray-800">Shopping Cart</h2>
                 <div className="divide-y divide-zinc-200">
-                    {items.map((it) => (
+                    {cart.items.map((it) => (
                         <div
                             key={it.id}
                             className="py-5 flex flex-col sm:flex-row items-center justify-between gap-4 hover:bg-gray-50 transition rounded-xl px-2"
                         >
-                            {/* Product Info */}
                             <div className="flex items-center gap-5 w-full sm:w-auto">
                                 <img
                                     src={it.thumbnail}
                                     alt={it.title}
-                                    className="w-24 h-24 rounded-xl object-cover border border-zinc-200 shadow-sm"
+                                    className="w-24 h-24 rounded-xl object-cover border border-zinc-200"
                                 />
                                 <div>
                                     <h3 className="font-medium text-gray-900 text-base line-clamp-2">
                                         {it.title}
                                     </h3>
-                                    <p className="text-sm text-green-600 mt-1">In Stock</p>
                                     <p className="text-sm text-gray-500">
                                         ${it.price.toFixed(2)} each
                                     </p>
-                                    {/* Quantity Controls */}
                                     <div className="flex items-center mt-2 gap-2">
                                         <button
                                             onClick={() => updateQty(it.id, it.qty - 1)}
+                                            disabled={updating === it.id}
                                             className="p-1 rounded-full border border-zinc-300 hover:bg-zinc-100"
                                         >
                                             <Minus size={14} />
@@ -106,6 +115,7 @@ export default function Cart() {
                                         </span>
                                         <button
                                             onClick={() => updateQty(it.id, it.qty + 1)}
+                                            disabled={updating === it.id}
                                             className="p-1 rounded-full border border-zinc-300 hover:bg-zinc-100"
                                         >
                                             <Plus size={14} />
@@ -114,13 +124,13 @@ export default function Cart() {
                                 </div>
                             </div>
 
-                            {/* Price + Remove */}
                             <div className="text-right w-full sm:w-auto">
                                 <div className="font-semibold text-lg text-gray-800">
                                     ${(it.price * it.qty).toFixed(2)}
                                 </div>
                                 <button
                                     onClick={() => removeItem(it.id)}
+                                    disabled={updating === it.id}
                                     className="text-red-500 hover:text-red-600 text-sm mt-2 flex items-center gap-1 justify-end"
                                 >
                                     <Trash2 size={14} /> Remove
@@ -131,22 +141,24 @@ export default function Cart() {
                 </div>
             </div>
 
-            {/* Summary Sidebar */}
-            <div className="bg-white rounded-2xl shadow-md border border-zinc-100 p-6 h-fit sticky top-8">
+            {/* Summary */}
+            <div className="bg-white rounded-2xl shadow-sm border border-zinc-100 p-6 h-fit sticky top-8">
                 <h3 className="text-xl font-semibold mb-4 text-gray-800">Order Summary</h3>
 
                 <div className="space-y-2 text-gray-700">
                     <div className="flex justify-between">
                         <span>Subtotal</span>
-                        <span>${total.toFixed(2)}</span>
+                        <span>${cart.total.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                         <span>Shipping</span>
-                        <span className="text-green-600 font-medium">Free</span>
+                        <span className={cart.shipping === 0 ? "text-green-600 font-medium" : ""}>
+                            {cart.shipping === 0 ? "Free" : `$${cart.shipping.toFixed(2)}`}
+                        </span>
                     </div>
                     <div className="flex justify-between font-semibold text-lg border-t border-zinc-200 pt-3">
                         <span>Total</span>
-                        <span>${total.toFixed(2)}</span>
+                        <span>${cart.grand_total.toFixed(2)}</span>
                     </div>
                 </div>
 
@@ -157,11 +169,10 @@ export default function Cart() {
                     Proceed to Checkout
                 </Link>
 
-                {/* Trust & Delivery Info */}
                 <div className="mt-6 text-sm text-gray-500 space-y-2 border-t border-zinc-200 pt-4">
                     <div className="flex items-center gap-2">
                         <Truck className="text-indigo-500 w-4 h-4" />
-                        <span>Free & Fast Delivery within 3–5 days</span>
+                        <span>Free & Fast Delivery (3–5 days)</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <ShieldCheck className="text-indigo-500 w-4 h-4" />

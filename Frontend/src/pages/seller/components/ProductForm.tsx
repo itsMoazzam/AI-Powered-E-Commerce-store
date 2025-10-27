@@ -1,13 +1,14 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import api from "../../../lib/api"
 import { Loader2, Plus, Trash, ImagePlus } from "lucide-react"
 import CategorySelector from "../../../components/Category"
 
 interface ProductFormProps {
-    onCreated: (p: any) => void
+    onCreated: (formData: FormData) => void
+    initialData?: any // 👈 new optional prop for editing
 }
 
-export default function ProductForm({ onCreated }: ProductFormProps) {
+export default function ProductForm({ onCreated, initialData }: ProductFormProps) {
     const [form, setForm] = useState({
         title: "",
         price: "",
@@ -24,16 +25,25 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
     const [customFields, setCustomFields] = useState([{ key: "", value: "" }])
     const [loading, setLoading] = useState(false)
 
-    const addCustomField = () =>
-        setCustomFields([...customFields, { key: "", value: "" }])
+    // 🟢 Pre-fill fields when editing
+    useEffect(() => {
+        if (initialData) {
+            setForm({
+                title: initialData.title || "",
+                price: initialData.price || "",
+                description: initialData.description || "",
+                category: initialData.category || 0,
+                stock: initialData.stock || 0,
+                discount: initialData.discount || 0,
+            })
+        }
+    }, [initialData])
 
+    const addCustomField = () => setCustomFields([...customFields, { key: "", value: "" }])
     const removeCustomField = (index: number) =>
         setCustomFields(customFields.filter((_, i) => i !== index))
-
     const addImageSlot = () => setImages([...images, null as unknown as File])
-
-    const removeImage = (index: number) =>
-        setImages(images.filter((_, i) => i !== index))
+    const removeImage = (index: number) => setImages(images.filter((_, i) => i !== index))
 
     async function submit(e: React.FormEvent) {
         e.preventDefault()
@@ -58,44 +68,27 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
         })
 
         try {
-            const { data } = await api.post("/api/seller/products/", fd)
-            onCreated(data)
-            alert("✅ Product created successfully!")
-            setForm({
-                title: "",
-                price: "",
-                description: "",
-                category: 0,
-                stock: 0,
-                discount: 0,
-            })
-            setThumbnail(null)
-            setModel3d(null)
-            setImages([])
-            setVideos([])
-            setCustomFields([{ key: "", value: "" }])
+            await onCreated(fd) // ✅ works for both create & edit
+            if (!initialData) alert("✅ Product created successfully!")
         } catch (error) {
-            console.error("❌ Product creation failed:", error)
-            alert("Product creation failed — check category or authentication.")
+            console.error("❌ Product save failed:", error)
+            alert("Failed to save product.")
         } finally {
             setLoading(false)
         }
     }
 
     return (
-        <form
-            onSubmit={submit}
-            className="bg-white rounded-2xl p-6 shadow-sm space-y-6 max-w-3xl mx-auto"
-        >
+        <form onSubmit={submit} className="bg-white rounded-2xl p-6 shadow-sm space-y-6 max-w-3xl mx-auto">
             <h3 className="text-xl font-semibold text-zinc-800">
-                Add New Product
+                {initialData ? "Edit Product" : "Add New Product"}
             </h3>
 
             <div className="grid gap-4 md:grid-cols-2">
                 <input
                     type="text"
                     placeholder="Product title"
-                    className="input"
+                    className="input-field"
                     value={form.title}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                     required
@@ -103,7 +96,7 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
                 <input
                     type="number"
                     placeholder="Price"
-                    className="input"
+                    className="input-field"
                     value={form.price}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
                     required
@@ -115,26 +108,22 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
                 <input
                     type="number"
                     placeholder="Stock quantity"
-                    className="input"
-                    value={form.stock || ""}
-                    onChange={(e) =>
-                        setForm({ ...form, stock: Number(e.target.value) })
-                    }
+                    className="input-field"
+                    value={form.stock}
+                    onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
                 />
                 <input
                     type="number"
                     placeholder="Discount (%)"
-                    className="input"
-                    value={form.discount || ""}
-                    onChange={(e) =>
-                        setForm({ ...form, discount: Number(e.target.value) })
-                    }
+                    className="input-field"
+                    value={form.discount}
+                    onChange={(e) => setForm({ ...form, discount: Number(e.target.value) })}
                 />
             </div>
 
             <textarea
                 placeholder="Product description"
-                className="input w-full"
+                className="input-field w-full"
                 rows={4}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -143,36 +132,40 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
             {/* File Uploads */}
             <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                    <label className="text-sm font-medium text-zinc-700">
-                        Thumbnail
-                    </label>
+                    <label className="text-sm font-medium text-zinc-700">Thumbnail</label>
                     <input
                         type="file"
                         accept="image/*"
                         onChange={(e) => setThumbnail(e.target.files?.[0] || null)}
                         className="mt-1 block text-sm text-zinc-600"
                     />
+                    {initialData?.thumbnail && (
+                        <img
+                            src={initialData.thumbnail}
+                            alt="Current Thumbnail"
+                            className="w-24 h-24 mt-2 object-cover rounded-md border"
+                        />
+                    )}
                 </div>
 
                 <div>
-                    <label className="text-sm font-medium text-zinc-700">
-                        3D Model (.glb / .gltf)
-                    </label>
+                    <label className="text-sm font-medium text-zinc-700">3D Model (.glb / .gltf)</label>
                     <input
                         type="file"
                         accept=".glb,.gltf"
                         onChange={(e) => setModel3d(e.target.files?.[0] || null)}
                         className="mt-1 block text-sm text-zinc-600"
                     />
+                    {initialData?.model_3d && (
+                        <p className="text-xs text-zinc-500 mt-1">Current model: {initialData.model_3d}</p>
+                    )}
                 </div>
             </div>
 
-            {/* ✅ Multiple Images */}
+            {/* Additional Images */}
             <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium text-zinc-700">
-                        Additional Images
-                    </label>
+                    <label className="text-sm font-medium text-zinc-700">Additional Images</label>
                     <button
                         type="button"
                         onClick={addImageSlot}
@@ -207,9 +200,7 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
 
             {/* Videos */}
             <div>
-                <label className="text-sm font-medium text-zinc-700">
-                    Product Videos
-                </label>
+                <label className="text-sm font-medium text-zinc-700">Product Videos</label>
                 <input
                     type="file"
                     multiple
@@ -222,9 +213,7 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
             {/* Attributes */}
             <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium text-zinc-700">
-                        Custom Attributes
-                    </label>
+                    <label className="text-sm font-medium text-zinc-700">Custom Attributes</label>
                     <button
                         type="button"
                         onClick={addCustomField}
@@ -239,7 +228,7 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
                         <input
                             type="text"
                             placeholder="Key (e.g. Color)"
-                            className="input flex-1"
+                            className="input-field flex-1"
                             value={f.key}
                             onChange={(e) => {
                                 const copy = [...customFields]
@@ -250,7 +239,7 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
                         <input
                             type="text"
                             placeholder="Value (e.g. Red)"
-                            className="input flex-1"
+                            className="input-field flex-1"
                             value={f.value}
                             onChange={(e) => {
                                 const copy = [...customFields]
@@ -274,7 +263,13 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
                 disabled={loading}
                 className="btn-primary w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg disabled:opacity-70"
             >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add Product"}
+                {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                ) : initialData ? (
+                    "Update Product"
+                ) : (
+                    "Add Product"
+                )}
             </button>
         </form>
     )
