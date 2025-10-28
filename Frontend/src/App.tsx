@@ -6,9 +6,9 @@ import AuthLayout from './components/layouts/AuthLayout'
 import Protected from './components/Protected'
 import Register from './pages/auth/register/Register'
 import SearchPage from './pages/search/SearchPage'
-
+const Profile = lazy(() => import('./components/Profile'))
 const CategoryPage = lazy(() => import('./pages/category/CategoryPage'))
-const ProductDetail = lazy(() => import('./pages/products/ProductDetail'))
+const ProductDetail = lazy(() => import('./pages/Products/ProductDetail'))
 const Home = lazy(() => import('./pages/Home'))
 const Cart = lazy(() => import('./pages/Cart'))
 const Checkout = lazy(() => import('./pages/CheckOuts'))
@@ -30,15 +30,13 @@ function App() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/category/:categorySlug" element={<CategoryPage />} />
           <Route path="/product/:id" element={<ProductDetail />} />
-          {/* <Route path="/cart" element={<Protected allow={['customer']}><Cart /></Protected>} /> */}
-          <Route path="/cart" element={<Cart />} />
+          <Route path="/cart" element={<Protected allow={['customer']}><Cart /></Protected>} />
+          {/* <Route path="/cart" element={<Cart />} /> */}
           <Route path="/checkout" element={<Checkout />} />
-
-          {/* <Route path="/checkout" element={<Protected allow={['customer']}><Checkout /></Protected>} /> */}
-          {/* <Route path="/admin" element={<Protected allow={['admin']}><AdminPanel /></Protected>} /> */}
-          <Route path="/admin" element={<AdminPanel />} />
+          <Route path='/profile' element={<Protected allow={['customer', 'seller', 'admin']}><Profile /></Protected>} />
+          {/* <Route path="/checkout" element={<Prote cted allow={['customer']}><Checkout /></Protected>} /> */}
+          <Route path="/admin" element={<Protected allow={['admin']}><AdminPanel /></Protected>} />
           <Route path="/seller" element={<Protected allow={['seller']}><SellerDashboard /></Protected>} />
-          {/* <Route path="/seller" element={<SellerDashboard />} /> */}
 
         </Route>
         <Route path="/auth" element={<AuthLayout />}>
