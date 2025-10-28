@@ -4,7 +4,6 @@ import RootLayout from './components/layouts/RootLayout'
 import AuthLayout from './components/layouts/AuthLayout'
 // import { setAuth } from './store/auth'
 import Protected from './components/Protected'
-// import Navbar from './components/Navbar'
 import Register from './pages/auth/register/Register'
 
 const CategoryPage = lazy(() => import('./pages/category/CategoryPage'))
@@ -23,7 +22,6 @@ const Login = lazy(() => import('./pages/auth/Login'))
 function App() {
   return (
     <Suspense fallback={<div className="p-10 text-center">Loading…</div>}>
-      {/* <Navbar /> */}
       <Routes>
         <Route element={<RootLayout />}>
           <Route index element={<Home />} />
