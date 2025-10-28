@@ -289,7 +289,7 @@ export default function CategoryGrid() {
 
                     </div>
 
-                    {/* User */}
+                    {/* User Auth */}
                     {!user ? (
                         <Link
                             to="/auth/login"
