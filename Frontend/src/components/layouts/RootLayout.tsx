@@ -1,7 +1,7 @@
 // import React from "react"
 import { Outlet } from "react-router-dom"
 import { motion } from "framer-motion"
-import CategoryGrid from "../Home/CategoryGrid"
+import NavBar from "../Home/NavBar"
 
 // import {
 //     ShoppingCart,
@@ -74,7 +74,7 @@ export default function RootLayout() {
                     </nav>
                 </div>
             </header> */}
-            <CategoryGrid />
+            <NavBar />
             <motion.main
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}

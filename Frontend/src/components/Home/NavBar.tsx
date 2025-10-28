@@ -16,7 +16,7 @@ type Category = {
     children?: Category[];
 };
 
-export default function CategoryGrid() {
+export default function NavBar() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [hoveredCategory, setHoveredCategory] = useState<Category | null>(null);
     const [cartOpen, setCartOpen] = useState(false);
@@ -79,7 +79,7 @@ export default function CategoryGrid() {
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         if (searchQuery.trim()) {
-            window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`;
+            window.location.href = `/search?query=${encodeURIComponent(searchQuery)}`;
         }
     };
 

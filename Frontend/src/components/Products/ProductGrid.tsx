@@ -23,21 +23,25 @@ interface PaginatedResponse {
 }
 
 interface Props {
-    CategorySlug: string | null
+    CategorySlug?: string | null;
+    SearchText?: string | null;
 }
 
-
-export default function ProductGrid({ CategorySlug = null }: Props) {
+export default function ProductGrid({ 
+    CategorySlug = null, 
+    SearchText = null 
+}: Props = {}) {
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [currentPage, setCurrentPage] = useState(1)
     const [totalProducts, setTotalProducts] = useState(0)
     const [filters, setFilters] = useState<FilterValues>({
-        priceRange: [0, 10000],
-        discount: 0,
-        rating: 0
-    } as unknown as FilterValues)
+        price__gte: 0,
+        price__lte: 10000,
+        discount__gte: 0,
+        search_text: undefined,
+    })
 
     const PRODUCTS_PER_PAGE = 10
     const totalPages = Math.ceil(totalProducts / PRODUCTS_PER_PAGE)
@@ -47,24 +51,29 @@ export default function ProductGrid({ CategorySlug = null }: Props) {
             try {
                 setLoading(true)
 
-                // Ensure priceRange is an array and provide safe defaults for all filter values
-                const priceRange = Array.isArray(filters?.priceRange) ? filters.priceRange : [0, 10000]
-                const minPrice = priceRange[0] ?? 0
-                const maxPrice = priceRange[1] ?? 10000
-                const minDiscount = typeof filters?.discount === "number" ? filters!.discount : Number(filters?.discount) || 0
-
+                // Create query params from filters
                 const queryParams = new URLSearchParams({
-                    page: currentPage.toString(),
-                    min_price: String(minPrice),
-                    max_price: String(maxPrice),
-                    min_discount: String(minDiscount)
+                    page: currentPage.toString()
                 })
 
-                // Only include category_slug when provided (non-null / non-empty)
+                // Add all non-empty filters to query params
+                Object.entries(filters).forEach(([key, value]) => {
+                    if (value !== '' && value !== null && value !== undefined) {
+                        queryParams.append(key, String(value))
+                    }
+                })
+
+                // Add category_slug if provided
                 if (CategorySlug) {
-                    queryParams.append("category_slug", String(CategorySlug))
+                    queryParams.append("category_slug", CategorySlug)
                 }
 
+                // Add search_text if provided
+                if (SearchText) {
+                    queryParams.append("search_text", SearchText)
+                }
+
+                // Make the API call with all filters
                 const response = await api.get(`/api/products/?${queryParams}`)
                 const data = response.data as PaginatedResponse
                 console.log(response.data)
@@ -85,7 +94,7 @@ export default function ProductGrid({ CategorySlug = null }: Props) {
         }
 
         fetchProducts()
-    }, [currentPage, filters, CategorySlug])
+    }, [currentPage, filters, CategorySlug, SearchText])
 
     if (loading)
         return (

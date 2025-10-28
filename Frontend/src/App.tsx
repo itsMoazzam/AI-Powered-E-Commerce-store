@@ -5,9 +5,10 @@ import AuthLayout from './components/layouts/AuthLayout'
 // import { setAuth } from './store/auth'
 import Protected from './components/Protected'
 import Register from './pages/auth/register/Register'
+import SearchPage from './pages/search/SearchPage'
 
 const CategoryPage = lazy(() => import('./pages/category/CategoryPage'))
-const ProductDetail = lazy(() => import('./pages/Products/ProductDetail'))
+const ProductDetail = lazy(() => import('./pages/products/ProductDetail'))
 const Home = lazy(() => import('./pages/Home'))
 const Cart = lazy(() => import('./pages/Cart'))
 const Checkout = lazy(() => import('./pages/CheckOuts'))
@@ -26,6 +27,7 @@ function App() {
         <Route element={<RootLayout />}>
           <Route index element={<Home />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/search" element={<SearchPage />} />
           <Route path="/category/:categorySlug" element={<CategoryPage />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           {/* <Route path="/cart" element={<Protected allow={['customer']}><Cart /></Protected>} /> */}
