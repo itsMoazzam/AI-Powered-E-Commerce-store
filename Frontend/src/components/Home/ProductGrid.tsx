@@ -23,9 +23,9 @@ export default function ProductGrid() {
         const fetchProducts = async () => {
             try {
                 setLoading(true)
-                const response = await api.get("/api/products/") // ✅ Django REST endpoint
+                const response = await api.get("/api/products/?page=1&page_size=4") // ✅ Django REST endpoint with pagination
                 console.log(response.data)
-                const formattedProducts = response.data.map((p: any) => ({
+                const formattedProducts = response.data.results.map((p: any) => ({
                     ...p,
                     has3d: Boolean(p.model_3d), // 👈 derive has3d flag from model_3d
                 }))
