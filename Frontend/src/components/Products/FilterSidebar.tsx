@@ -8,8 +8,7 @@ export interface FilterValues {
   price__gte: number;
   price__lte: number;
   discount__gte: number;
-  title__icontains: string;
-  description__icontains: string;
+  search_text?: string;
   category_slug?: string;
   [key: string]: string | number | boolean | undefined;
 }
@@ -19,8 +18,7 @@ export default function FilterSidebar({ onFilterChange }: FilterProps) {
     price__gte: 0,
     price__lte: 10000,
     discount__gte: 0,
-    title__icontains: '',
-    description__icontains: '',
+    search_text: undefined,
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [isDirty, setIsDirty] = useState(false);
@@ -112,9 +110,13 @@ export default function FilterSidebar({ onFilterChange }: FilterProps) {
             type="text"
             value={searchTerm}
             onChange={(e) => {
+              const value = e.target.value.trim();
               setSearchTerm(e.target.value);
-              handleChange('title__icontains', e.target.value);
-              handleChange('description__icontains', e.target.value);
+              setFilters(prev => ({
+                ...prev,
+                search_text: value || undefined
+              }));
+              setIsDirty(true);
             }}
             placeholder="Search by title or description"
             className="w-full px-3 py-2 border rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -179,8 +181,7 @@ export default function FilterSidebar({ onFilterChange }: FilterProps) {
                 price__gte: 0,
                 price__lte: 10000,
                 discount__gte: 0,
-                title__icontains: '',
-                description__icontains: ''
+                search_text: undefined,
               };
               setFilters(defaultFilters);
               setSearchTerm('');
