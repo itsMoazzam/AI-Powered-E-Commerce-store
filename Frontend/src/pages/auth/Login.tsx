@@ -1,107 +1,115 @@
-import React, { useState } from "react"
-import api from "../../lib/api"
-import { useDispatch } from "react-redux"
-import type { AppDispatch } from "../../store"
-import { setAuth } from "../../store/auth"
-// import { User } from "lucide-react"
+import React, { useState } from "react";
+import api from "../../lib/api";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "../../store";
+import { setAuth } from "../../store/auth";
+import { Eye, EyeOff, X } from "lucide-react";
 
 export default function Login() {
-    const dispatch = useDispatch<AppDispatch>()
-    const [username, setusername] = useState("")
-    const [password, setPassword] = useState("")
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState("")
+    const dispatch = useDispatch<AppDispatch>();
+    const [username, setusername] = useState("");
+    const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-    // inside Login component
     async function submit(e: React.FormEvent) {
-        e.preventDefault()
-        setLoading(true)
-        setError("")
+        e.preventDefault();
+        setLoading(true);
+        setError("");
         try {
-            const { data } = await api.post("/api/auth/login/", { username, password })
-            console.log("LOGIN RESPONSE:", data)
-
-            // Defensive reads
-            const token = data?.access ?? data?.token ?? null
-            const user = data?.user ?? null
-            const role = user?.role ?? data?.role ?? null
+            const { data } = await api.post("/api/auth/login/", { username, password });
+            const token = data?.access ?? data?.token ?? null;
+            const user = data?.user ?? null;
+            const role = user?.role ?? data?.role ?? null;
 
             if (!token || !user) {
-                // Something returned but required fields missing
-                setError("Login succeeded but server response was unexpected. Please try again.")
-                // helpful debug line
-                console.error("Login response missing token or user:", data)
-                setLoading(false)
-                return
+                setError("Unexpected server response. Please try again.");
+                console.error("Missing token/user:", data);
+                setLoading(false);
+                return;
             }
 
-            // Save in Redux and localStorage using the robust setAuth reducer
-            dispatch(setAuth({
-                token,
-                role,
-                user,
-            }))
+            dispatch(setAuth({ token, role, user }));
 
-            // Redirect immediately based on role/superuser (use user.is_superuser first)
-            if (user?.is_superuser) {
-                location.href = "/admin"
-            } else if (role === "seller") {
-                location.href = "/seller"
-            } else {
-                location.href = "/profile"
-            }
+            if (user?.is_superuser) location.href = "/admin";
+            else if (role === "seller") location.href = "/seller";
+            else location.href = "/profile";
         } catch (err) {
-            console.error("Login error:", err)
-            setError("Invalid username or password. Please try again.")
+            console.error("Login error:", err);
+            setError("Invalid username or password. Please try again.");
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
     }
 
-
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-purple-700 to-indigo-800 dark:from-zinc-900 dark:via-zinc-950 dark:to-black px-4">
-            <div className="relative w-full max-w-md p-8 bg-white/10 dark:bg-zinc-900/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20">
-                <h2 className="text-3xl font-bold text-center text-white mb-6 tracking-tight">
+        <div className="max-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900/10 via-gray-900/40 to-black relative overflow-hidden p-[1px]">
+            {/* Decorative Glow Circles */}
+            <div className="absolute w-72 h-72 bg-blue-600/30 rounded-full blur-3xl top-20 left-20 animate-pulse" />
+            <div className="absolute w-72 h-72 bg-purple-600/30 rounded-full blur-3xl bottom-20 right-20 animate-pulse delay-300" />
+
+            <div className="relative z-10 w-full max-w-md bg-gray-800/70 backdrop-blur-xl border border-gray-700 rounded-3xl shadow-2xl p-8 text-white transform transition-all duration-300 hover:scale-[1.01]">
+                {/* Close Icon */}
+                <button
+                    onClick={() => (window.location.href = "/")}
+                    className="absolute top-5 right-5 text-gray-400 hover:text-white transition"
+                >
+                    <X size={22} />
+                </button>
+
+                <h2 className="text-3xl font-extrabold text-center mb-2 tracking-tight">
                     Welcome Back 👋
                 </h2>
-                <p className="text-center text-zinc-300 mb-8 text-sm">
-                    Sign in to continue to your dashboard
+                <p className="text-center text-gray-400 text-sm mb-8">
+                    Sign in to access your dashboard
                 </p>
 
                 <form onSubmit={submit} className="space-y-5">
+                    {/* Username */}
                     <div>
-                        <label className="block text-sm text-zinc-200 mb-1">username</label>
+                        <label className="block text-sm text-gray-300 mb-1">Username</label>
                         <input
                             type="text"
                             value={username}
                             onChange={(e) => setusername(e.target.value)}
-                            placeholder="you@example.com"
-                            className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-zinc-400 transition-all"
+                            placeholder="Enter your username"
+                            className="w-full px-4 py-3 rounded-xl bg-gray-700/70 text-white placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                             required
                         />
                     </div>
 
+                    {/* Password */}
                     <div>
-                        <label className="block text-sm text-zinc-200 mb-1">Password</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
-                            className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-zinc-400 transition-all"
-                            required
-                        />
+                        <label className="block text-sm text-gray-300 mb-1">Password</label>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                className="w-full px-4 py-3 rounded-xl bg-gray-700/70 text-white placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-3 text-gray-400 hover:text-white transition"
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
                     </div>
 
-                    {error && (
-                        <div className="text-red-400 text-sm text-center">{error}</div>
-                    )}
+                    {/* Error Message */}
+                    {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 
+                    {/* Submit Button */}
                     <button
-                        className={`w-full py-3 rounded-xl font-semibold text-white transition-all duration-300 transform ${loading
+                        type="submit"
+                        className={`w-full py-3 rounded-xl font-semibold text-white transition-all duration-300 shadow-lg ${loading
                             ? "bg-blue-400 cursor-not-allowed"
-                            : "bg-blue-600 hover:bg-blue-700 active:scale-[0.98]"
+                            : "bg-blue-600 hover:bg-blue-700 hover:shadow-blue-700/40 active:scale-[0.98]"
                             }`}
                         disabled={loading}
                     >
@@ -109,18 +117,17 @@ export default function Login() {
                     </button>
                 </form>
 
-                <p className="text-center text-sm text-zinc-300 mt-6">
+                {/* Footer */}
+                <p className="text-center text-sm text-gray-400 mt-6">
                     Don’t have an account?{" "}
                     <a
                         href="/register"
-                        className="text-blue-400 hover:underline hover:text-blue-300 font-medium"
+                        className="text-blue-400 hover:text-blue-300 hover:underline font-medium"
                     >
                         Create one
                     </a>
                 </p>
-
-                <div className="absolute top-4 right-4 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
             </div>
         </div>
-    )
+    );
 }
