@@ -146,7 +146,7 @@ const CategorySelector: React.FC<Props> = ({ onSelect, selectedId }) => {
                     onChange={e => setNewCategory(e.target.value)}
                 />
                 <select
-                    className="border rounded px-2 py-1 text-sm text-gray-600"
+                    className="border rounded cursor-pointer px-2 py-1 text-sm text-gray-600"
                     value={level}
                     onChange={e =>
                         setLevel(e.target.value as "parent" | "child" | "stepchild")
@@ -158,7 +158,7 @@ const CategorySelector: React.FC<Props> = ({ onSelect, selectedId }) => {
                 </select>
                 <button
                     type="button"
-                    className="flex items-center gap-1 bg-indigo-600 text-white px-3 py-2 rounded hover:bg-indigo-700"
+                    className="flex items-center gap-1 bg-indigo-600 text-white px-4 py-[4px] cursor-pointer rounded hover:bg-indigo-700"
                     onClick={handleAddCategory}
                 >
                     <Plus size={14} /> Add

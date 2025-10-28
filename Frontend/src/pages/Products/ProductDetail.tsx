@@ -75,38 +75,49 @@ export default function ProductDetailPage() {
     }
 
     useEffect(() => {
-        if (!id) {
-            setError("Missing product ID in URL")
-            setLoading(false)
-            return
-        }
+    if (!id) {
+        setError("Missing product ID in URL");
+        setLoading(false);
+        return;
+    }
 
-        const controller = new AbortController()
-        const fetchProduct = async () => {
-            try {
-                setLoading(true)
-                const { data } = await api.get(`/api/products/${id}/`, {
-                    signal: controller.signal,
-                })
-                const detectedModel = detect3DModel(data)
-                const enrichedData = {
-                    ...data,
-                    model_3d: detectedModel,
-                    has3d: Boolean(detectedModel),
-                }
-                setProduct(enrichedData)
-            } catch (err: any) {
-                if (axios.isCancel(err)) return
-                console.error("Failed to load product:", err)
-                setError("Failed to load product details.")
-            } finally {
-                setLoading(false)
-            }
-        }
+    const controller = new AbortController();
 
-        fetchProduct()
-        return () => controller.abort()
-    }, [id])
+    const fetchProduct = async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const { data } = await api.get(`/api/products/${id}/`, {
+                signal: controller.signal,
+            });
+
+            const detectedModel = detect3DModel(data);
+            const enrichedData = {
+                ...data,
+                model_3d: detectedModel,
+                has3d: Boolean(detectedModel),
+            };
+
+            setProduct(enrichedData);
+            setLoading(false);
+        } catch (err: any) {
+            if (axios.isCancel(err)) return;
+
+            console.error("❌ Failed to load product:", err);
+
+            // ⏳ Force show loading first, then "Product not found" after 3s
+            setLoading(true);
+            setTimeout(() => {
+                setLoading(false);
+                setError("Product not found");
+            }, 3000);
+        }
+    };
+
+    fetchProduct();
+    return () => controller.abort();
+}, [id])
 
     if (loading)
         return (
@@ -129,7 +140,11 @@ export default function ProductDetailPage() {
         : basePrice
     const discountAmount = hasDiscount ? basePrice - discountedPrice : 0
 
-    const images = [product.thumbnail, ...(product.images || [])].filter(Boolean)
+    const images = [
+        product.thumbnail,
+        ...(product.images?.map(img => img.image) || [])
+    ].filter(Boolean)
+
 
     const handlePrev = () =>
         setCurrentImage((prev) => (prev - 1 + images.length) % images.length)
@@ -160,6 +175,7 @@ export default function ProductDetailPage() {
                 <div className="lg:col-span-2 space-y-5 relative bg-white rounded-xl p-4 shadow-sm border">
                     <AnimatePresence mode="wait">
                         {!show3D ? (
+                            <div>
                             <motion.div
                                 key="images"
                                 initial={{ opacity: 0 }}
@@ -191,6 +207,49 @@ export default function ProductDetailPage() {
                                     )}
                                 </div>
                             </motion.div>
+                            <div>
+                                <div className="flex flex-row items-center ml-6 md:ml-0">
+                                    <ul
+                                        id="thumbnail-container"
+                                        className="flex flex-nowrap h-full w-full items-center justify-start overflow-x-auto pt-6 md:ml-0 md:mr-6"
+                                        aria-label={`Open image`}
+                                        data-product-title={product.title}
+                                    >
+                                        {images.map((src, index) => (
+                                        <li key={index} className="mr-6">
+                                            <button
+                                            className={`product-thumbnail ${
+                                                index === 2 ? "border" : "" // Example: mark one as active
+                                            }`}
+                                            onClick={() => setCurrentImage(index)}
+                                            aria-current={index === 2 ? "true" : "false"}
+                                            aria-label={`Open image ${index + 1} (${product.title})`}
+                                            >
+                                            <figure
+                                                className="pointer-events-none thumbnail-image"
+                                                role="presentation"
+                                                aria-hidden="true"
+                                            >
+                                                <picture>
+                                                <img
+                                                    src={src}
+                                                    alt={`${product.title} Image ${index + 1}`}
+                                                    loading="lazy"
+                                                    width="100"
+                                                    height="100"
+                                                    className="max-w-none cursor-pointer object-cover mx-auto"
+                                                    decoding="auto"
+                                                    fetchpriority="auto"
+                                                />
+                                                </picture>
+                                            </figure>
+                                            </button>
+                                        </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                            </div>
                         ) : (
                             <motion.div
                                 key="3dview"
