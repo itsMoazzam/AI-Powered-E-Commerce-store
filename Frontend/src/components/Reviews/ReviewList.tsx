@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import api from "../../lib/api";
-import ReplyForm from "./ReplyForm";
 
 interface Review {
     id: number;
@@ -49,10 +48,6 @@ export default function ReviewList({ productId }: { productId: number }) {
 
                         {r.text && <p className="mt-2 text-gray-700 text-sm">{r.text}</p>}
 
-                        <div className="mt-2 flex gap-2">
-                            <ReplyForm parentId={r.id} onPosted={fetchReviews} small />
-                        </div>
-
                         {renderReplies(r.replies, depth + 1)}
                     </div>
                 ))}
@@ -78,10 +73,6 @@ export default function ReviewList({ productId }: { productId: number }) {
                     </div>
 
                     {rev.text && <p className="mt-2 text-gray-700">{rev.text}</p>}
-
-                    <div className="mt-3 flex gap-2">
-                        <ReplyForm parentId={rev.id} onPosted={fetchReviews} />
-                    </div>
 
                     {/* nested replies */}
                     {renderReplies(rev.replies)}
