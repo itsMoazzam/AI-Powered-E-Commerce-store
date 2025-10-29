@@ -18,20 +18,13 @@ export default function CartDrawer({ open, setOpen }: { open: boolean; setOpen: 
     }, [open]);
 
     const fetchCart = async () => {
+        if (!token) return; // avoid request without token
         try {
             setLoading(true);
-            const res = await axios.get(`${API_BASE}/cart/`, {
+            const res = await axios.get(`${API_BASE}/cart/cart/`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-
-            // ✅ Handle both list or object response
-            if (Array.isArray(res.data)) {
-                setCartItems(res.data);
-            } else if (res.data.items) {
-                setCartItems(res.data.items);
-            } else {
-                setCartItems([]);
-            }
+            setCartItems(res.data.items || []);
         } catch (err: any) {
             console.error('❌ Failed to load cart:', err);
             if (err.response?.status === 401) {
@@ -43,6 +36,7 @@ export default function CartDrawer({ open, setOpen }: { open: boolean; setOpen: 
             setLoading(false);
         }
     };
+
 
     const removeItem = async (id: number) => {
         try {
