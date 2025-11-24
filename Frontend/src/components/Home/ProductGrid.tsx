@@ -68,7 +68,7 @@ export default function ProductGrid() {
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">✨ Featured Products</h2>
                 <Link
-                    to="/products"
+                    to="/search"
                     className="text-blue-600 hover:text-blue-700 text-sm font-medium transition"
                 >
                     View All →
