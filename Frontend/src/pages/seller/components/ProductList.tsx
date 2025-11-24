@@ -99,7 +99,6 @@ export default function ProductList() {
                                     </span>
                                 )}
                             </div>
-
                             <div className="mt-3 flex items-start justify-between gap-3">
                                 <div className="flex-1">
                                     <div className="font-semibold text-zinc-900 ">{p.title}</div>
@@ -167,10 +166,17 @@ export default function ProductList() {
             {/* 🟢 Edit Modal (fixed placement) */}
             {editProduct && (
                 <ProductEditModal onClose={() => setEditProduct(null)}>
-                    <ProductForm
-                        initialData={editProduct}
-                        onCreated={(formData) => handleUpdate(editProduct.id, formData)}
-                    />
+                    {
+                        (() => {
+                            const ProductFormAny = ProductForm as unknown as any
+                            return (
+                                <ProductFormAny
+                                    initialData={editProduct}
+                                    onCreated={(formData: any) => handleUpdate(editProduct.id, formData)}
+                                />
+                            )
+                        })()
+                    }
                 </ProductEditModal>
             )}
         </section>
