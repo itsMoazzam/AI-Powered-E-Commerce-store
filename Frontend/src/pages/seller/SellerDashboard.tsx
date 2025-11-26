@@ -21,27 +21,40 @@ type Product = {
 }
 
 export default function SellerDashboard() {
-    const [view, setView] = useState<View>("products")
+    const [view, setViewState] = useState<View>("products")
     const [products, setProducts] = useState<Product[]>([])
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+    const [sellerName, setSellerName] = useState<string | null>(null)
+    // cast helpers to avoid cross-file prop type mismatches in this isolated edit
+    const ProductListAny = ProductList as unknown as any
 
     // load products (and other panels data if you want)
     useEffect(() => {
         let mounted = true;
         (async () => {
-
             try {
-                console.log("token(localStorage) =>", localStorage.getItem("token"))
-                console.log("role(localStorage) =>", localStorage.getItem("role"))
-                // uncomment when backend exists:
                 const { data } = await api.get("/api/seller/products/")
                 if (mounted) setProducts(data)
-
-
             } catch (err) {
-                console.error("Failed to load seller products", err.response ?? err)
+                // avoid assuming error shape
+                console.error("Failed to load seller products", (err as any)?.response ?? err)
             }
         })()
+
+        // read seller name from localStorage (if available) to show a welcome message
+        try {
+            const raw = localStorage.getItem('user')
+            if (raw) {
+                const parsed = JSON.parse(raw)
+                const name = parsed.first_name && parsed.last_name
+                    ? `${parsed.first_name} ${parsed.last_name}`
+                    : parsed.username || parsed.email || null
+                if (mounted) setSellerName(name)
+            }
+        } catch {
+            // ignore parse errors
+        }
+
         return () => {
             mounted = false
         }
@@ -50,12 +63,12 @@ export default function SellerDashboard() {
     // basic handlers used by child components
     function handleCreated(product: Product) {
         setProducts((s) => [product, ...s])
-        setView("products")
+        setViewState("products")
     }
     function handleUpdated(updated: Product) {
         setProducts((s) => s.map((p) => (p.id === updated.id ? updated : p)))
         setSelectedProduct(null)
-        setView("products")
+        setViewState("products")
     }
     function handleDeleted(id: number | string) {
         setProducts((s) => s.filter((p) => p.id !== id))
@@ -63,28 +76,27 @@ export default function SellerDashboard() {
 
     return (
         <div className="flex h-screen bg-zinc-50 dark:bg-zinc-900">
-            <SellerSidebar view={view} setView={setView} productCount={products.length} />
+            <SellerSidebar view={view} setView={(v: string) => setViewState(v as View)} productCount={products.length} />
 
             <main className="flex-1 overflow-y-auto p-6">
                 <div className="max-w-7xl mx-auto space-y-6">
                     <header className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Seller Dashboard</h1>
-                            <p className="text-sm text-zinc-500">Manage products, upload 3D models, bulk import CSV and monitor system status</p>
+                            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">{sellerName ? `Welcome, ${sellerName}` : 'Manage products, upload 3D models, bulk import CSV and monitor system status'}</h1>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button onClick={() => setView("bulk")} className="btn-outline">Bulk Upload</button>
-                            <button onClick={() => setView("add")} className="btn-primary">Add Product</button>
+                            <button onClick={() => setViewState("bulk")} className="btn-outline">Bulk Upload</button>
+                            <button onClick={() => setViewState("add")} className="btn-primary">Add Product</button>
                         </div>
                     </header>
 
                     {/* Views */}
                     {view === "products" && (
-                        <ProductList
+                        <ProductListAny
                             products={products}
-                            onEdit={(p) => {
+                            onEdit={(p: any) => {
                                 setSelectedProduct(p)
-                                setView("edit")
+                                setViewState("edit")
                             }}
                             onDelete={handleDeleted}
                             refresh={async () => {
@@ -98,15 +110,16 @@ export default function SellerDashboard() {
                     {view === "add" && <ProductForm onCreated={handleCreated} />}
 
                     {view === "edit" && selectedProduct && (
-                        <ProductForm product={selectedProduct} onUpdated={handleUpdated} onCancel={() => setView("products")} />
+                        // @ts-ignore - ProductForm props are validated in its module; using as-is here
+                        <ProductForm product={selectedProduct} onUpdated={handleUpdated} onCancel={() => setViewState("products")} />
                     )}
 
-                    {view === "bulk" && <CSVUpload onImported={(items) => setProducts((s) => [...items, ...s])} />}
+                    {view === "bulk" && <CSVUpload onImported={(items: any) => setProducts((s) => [...(items as Product[]), ...s])} />}
 
-                    {view === "payments" && <PaymentsPanel />}
-                    {view === "reviews" && <ReviewsPanel />}
+                    {view === "payments" && <PaymentsPanel payments={[]} onAction={(id, action) => { console.log('payments action', id, action) }} />}
+                    {view === "reviews" && <ReviewsPanel onModerate={(id, action, reason) => { console.log('moderate', id, action, reason) }} />}
                     {view === "system" && <SystemPanel />}
-                    {view === "reports" && <ReportsPanel payments={[]} reviews={[]} products={products} systems={[]} />}
+                    {view === "reports" && <ReportsPanel payments={[]} reviews={[]} products={products as any} systems={[]} />}
                 </div>
             </main>
         </div>

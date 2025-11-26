@@ -4,6 +4,7 @@ import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../store";
 import { setAuth } from "../../store/auth";
 import { Eye, EyeOff, X } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
 
 export default function Login() {
     const dispatch = useDispatch<AppDispatch>();
@@ -12,6 +13,7 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
 
     async function submit(e: React.FormEvent) {
         e.preventDefault();
@@ -73,7 +75,7 @@ export default function Login() {
                             type="text"
                             value={username}
                             onChange={(e) => setusername(e.target.value)}
-                            placeholder="Enter your username"
+                            placeholder="username"
                             className="w-full px-4 py-3 rounded-xl bg-gray-700/70 text-white placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                             required
                         />
@@ -116,6 +118,42 @@ export default function Login() {
                         {loading ? "Signing in..." : "Sign In"}
                     </button>
                 </form>
+
+                {/* Continue with Google */}
+                <div className="mt-4 flex items-center justify-center">
+                    <GoogleLogin
+                        onSuccess={async (credentialResponse) => {
+                            const credential = (credentialResponse as any)?.credential;
+                            if (!credential) return;
+                            setError("");
+                            try {
+                                // send credential to backend for verification / login
+                                const { data } = await api.post("/api/auth/google-login/", { credential });
+                                const token = data?.access ?? data?.token ?? null;
+                                const user = data?.user ?? null;
+                                const role = user?.role ?? data?.role ?? null;
+
+                                if (!token || !user) {
+                                    setError("Unexpected server response from Google sign-in. Please try regular login.");
+                                    // no-op
+                                    return;
+                                }
+
+                                dispatch(setAuth({ token, role, user }));
+
+                                if (user?.is_superuser) location.href = "/admin";
+                                else if (role === "seller") location.href = "/seller";
+                                else location.href = "/profile";
+                            } catch (err) {
+                                console.error("Google login error:", err);
+                                setError("Google sign-in failed. Please try again or use regular login.");
+                            }
+                        }}
+                        onError={() => {
+                            setError("Google sign-in failed. Please try again.");
+                        }}
+                    />
+                </div>
 
                 {/* Footer */}
                 <p className="text-center text-sm text-gray-400 mt-6">
