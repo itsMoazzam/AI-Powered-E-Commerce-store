@@ -1,12 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
-import { FaShoppingCart, FaSearch, FaHeart } from "react-icons/fa";
+import { FaShoppingCart, FaSearch, FaHeart, FaHome } from "react-icons/fa";
 import CartDrawer from "./Cart";
 import api from "../../lib/api";
 import Tooltip from "@mui/material/Tooltip";
 import Box from "@mui/material/Box";
 import type { Instance } from "@popperjs/core";
+import ThreeDot from "../threeDot";
 
 type Category = {
     id: number;
@@ -33,6 +34,7 @@ export default function NavBar() {
     const [menuHovered, setMenuHovered] = useState(false);
     const [hoverPath, setHoverPath] = useState<number[]>([]);
     const menuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const userMenuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
     const positionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const popperRef = useRef<Instance>(null);
     const areaRef = useRef<HTMLDivElement>(null);
@@ -54,16 +56,22 @@ export default function NavBar() {
             if (raw) {
                 const parsed = JSON.parse(raw);
 
-                // ✅ Determine user role based on backend flags
-                const role = parsed.is_admin
-                    ? "admin"
-                    : parsed.is_seller
-                        ? "seller"
-                        : "customer";
+                // Robust role detection: prefer an explicit `role` property, then common backend flags.
+                // Some backends use `is_superuser`/`is_staff`/`is_admin` for admin, or `is_seller` for seller.
+                let role: User['role'] = 'customer';
+                if (parsed.role && (parsed.role === 'admin' || parsed.role === 'seller' || parsed.role === 'customer')) {
+                    role = parsed.role;
+                } else if (parsed.is_superuser || parsed.is_staff || parsed.is_admin) {
+                    role = 'admin';
+                } else if (parsed.is_seller || parsed.is_seller === true) {
+                    role = 'seller';
+                } else {
+                    role = 'customer';
+                }
 
                 setUser({
-                    username: parsed.username || parsed.email || "User",
-                    avatar: parsed.profile_photo || "",
+                    username: parsed.username || parsed.email || 'User',
+                    avatar: parsed.profile_photo || '',
                     role,
                 });
             }
@@ -75,6 +83,8 @@ export default function NavBar() {
     const handleCartToggle = () => setCartOpen(!cartOpen);
 
     const handleLogout = () => {
+        // close menu first so UI updates immediately
+        setUserMenuOpen(false);
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         setUser(null);
@@ -93,6 +103,39 @@ export default function NavBar() {
     const clearMenuTimeout = () => {
         if (menuTimeout.current) clearTimeout(menuTimeout.current);
     };
+
+    const clearUserMenuTimeout = () => {
+        if (userMenuTimeout.current) {
+            clearTimeout(userMenuTimeout.current);
+            userMenuTimeout.current = null;
+        }
+    };
+
+    const delayedCloseUserMenu = (ms = 3000) => {
+        clearUserMenuTimeout();
+        userMenuTimeout.current = setTimeout(() => {
+            setUserMenuOpen(false);
+        }, ms);
+    };
+
+    const toggleUserMenu = () => {
+        setUserMenuOpen((s) => {
+            const next = !s;
+            if (next) {
+                // opening: cancel any pending close
+                clearUserMenuTimeout();
+            }
+            return next;
+        });
+    };
+
+    // cleanup timeouts on unmount
+    useEffect(() => {
+        return () => {
+            clearMenuTimeout();
+            clearUserMenuTimeout();
+        };
+    }, []);
 
     const delayedCloseMenu = () => {
         clearMenuTimeout();
@@ -155,7 +198,7 @@ export default function NavBar() {
                     >
                         <button
                             onClick={() => setMenuOpen(!menuOpen)}
-                            className="p-1 rounded-md text-blue-500 hover:bg-gray-100 transition flex items-center gap-1 font-medium"
+                            className="p-1 rounded-md text-blue-500 hover:bg-gray-100 transition flex items-center gap-1 font-medium cursor-pointer"
                         >
                             {openMenu ? <X size={22} /> : <Menu size={22} />}
                             Categories
@@ -168,7 +211,7 @@ export default function NavBar() {
                                 onMouseLeave={delayedCloseMenu}
                             >
                                 {loading ? (
-                                    <div className="p-3 text-sm text-gray-500">Loading...</div>
+                                    <div className="p-3 text-sm text-gray-500"><ThreeDot /></div>
                                 ) : (
                                     categories.map((cat) => (
                                         <div
@@ -227,7 +270,7 @@ export default function NavBar() {
                     />
                     <button
                         type="submit"
-                        className="text-gray-600 hover:text-blue-600 p-2 rounded-full hover:bg-gray-200"
+                        className="text-gray-600 hover:text-blue-600 p-2 rounded-full hover:bg-gray-200 cursor-pointer"
                         aria-label="Search"
                     >
                         <FaSearch size={16} />
@@ -236,9 +279,10 @@ export default function NavBar() {
 
                 {/* Right side */}
                 <div className="flex items-center gap-4">
-                    {/* Wishlist & Cart visible only to customers */}
-                    {user?.role === "customer" && (
+                    {/* Wishlist & Cart visible only to customers. Sellers/Admins see a Home icon linking to their dashboard. */}
+                    {user?.role === "customer" ? (
                         <>
+
                             <Link
                                 to="/wishlist"
                                 className="p-2 text-pink-500 rounded-md hover:bg-gray-100"
@@ -250,7 +294,7 @@ export default function NavBar() {
                             <div className="relative">
                                 <button
                                     onClick={handleCartToggle}
-                                    className="p-2 text-blue-500 rounded-md hover:bg-gray-100"
+                                    className="p-2 text-blue-500 rounded-md hover:bg-gray-100 cursor-pointer"
                                     aria-label="Open cart"
                                 >
                                     <FaShoppingCart size={18} />
@@ -258,7 +302,18 @@ export default function NavBar() {
                                 <CartDrawer open={cartOpen} setOpen={setCartOpen} />
                             </div>
                         </>
-                    )}
+                    ) : user ? (
+
+                        // Seller and Admin: do not show wishlist or cart. Show a home icon linking to the relevant dashboard.
+                        <Link
+                            to={user.role === "seller" ? "/seller" : "/admin"}
+                            className="p-2 text-blue-700 rounded-md hover:bg-gray-100"
+                            aria-label="Dashboard"
+                            onClick={() => setUserMenuOpen(false)}
+                        >
+                            <FaHome size={18} />
+                        </Link>
+                    ) : null}
 
                     {/* User Auth */}
                     {!user ? (
@@ -271,8 +326,8 @@ export default function NavBar() {
                     ) : (
                         <div className="relative">
                             <button
-                                onClick={() => setUserMenuOpen((s) => !s)}
-                                className="flex items-center gap-2 px-3 py-1 rounded-full hover:bg-gray-100"
+                                onClick={toggleUserMenu}
+                                className="flex items-center gap-2 px-3 py-1 rounded-full hover:bg-gray-100 cursor-pointer"
                             >
                                 <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-medium">
                                     {user.avatar ? (
@@ -289,16 +344,25 @@ export default function NavBar() {
                             </button>
 
                             {userMenuOpen && (
-                                <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-md py-2">
+                                <div
+                                    className="absolute right-0 mt-2 w-40 bg-white text-gray-700 border rounded-md shadow-md py-2 "
+                                    onMouseEnter={clearUserMenuTimeout}
+                                    onMouseLeave={() => delayedCloseUserMenu(1000)}
+                                >
                                     <Link
                                         to="/profile"
                                         className="block px-3 py-2 text-sm hover:bg-gray-50"
+                                        onClick={() => setUserMenuOpen(false)}
                                     >
                                         Profile
                                     </Link>
                                     <button
-                                        onClick={handleLogout}
-                                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                                        onClick={() => {
+                                            // close menu immediately and then logout
+                                            setUserMenuOpen(false);
+                                            handleLogout();
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
                                     >
                                         Logout
                                     </button>
