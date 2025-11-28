@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { LayoutDashboard, CreditCard, MessageSquare, Server, Users, BarChart3, Settings, LogOut, Sun, Moon } from "lucide-react"
 import api from "../../lib/api"
 
 export default function AdminPanel() {
-    const [tab, setTab] = useState<"dashboard" | "payments" | "reviews" | "system" | "users" | "reports" | "settings">("dashboard")
+    const [tab, setTab] = useState<"dashboard" | "payments" | "reviews" | "system" | "users" | "sellers" | "reports" | "settings">("dashboard")
     const [darkMode, setDarkMode] = useState(false)
 
     type Payment = {
@@ -29,6 +29,8 @@ export default function AdminPanel() {
     }
     const [systems, setSystems] = useState<SystemStatus[]>([])
     const [users, setUsers] = useState([])
+    const [sellers, setSellers] = useState<any[]>([])
+    const processingIds = useRef<Set<number>>(new Set())
 
     useEffect(() => {
         document.documentElement.classList.toggle("dark", darkMode)
@@ -40,22 +42,52 @@ export default function AdminPanel() {
                 payments: "/api/admin/payments/",
                 reviews: "/api/admin/reviews/",
                 system: "/api/admin/system-status/",
-                users: "/api/admin/users/"
+                users: "/api/admin/users/",
+                sellers: "/api/admin/sellers/"
             }
             const url = endpoints[tab]
             if (url) {
-                const { data } = await api.get(url)
-                if (tab === "payments") setPayments(data)
-                if (tab === "reviews") setReviews(data)
-                if (tab === "system") setSystems(data)
-                if (tab === "users") setUsers(data)
+                try {
+                    const { data } = await api.get(url)
+                    if (tab === "payments") setPayments(data)
+                    if (tab === "reviews") setReviews(data)
+                    if (tab === "system") setSystems(data)
+                    if (tab === "users") setUsers(data)
+                    if (tab === "sellers") setSellers(data)
+                } catch (err) {
+                    console.error('Admin fetch failed', err)
+                }
             }
         })()
     }, [tab])
 
     async function act(id: number, action: "approve" | "reject") {
-        await api.post(`/api/admin/payments/${id}/${action}/`)
-        setPayments((prev) => prev.filter((p) => p.id !== id))
+        if (processingIds.current.has(id)) return
+        processingIds.current.add(id)
+        try {
+            await api.post(`/api/admin/payments/${id}/${action}/`)
+            setPayments((prev) => prev.filter((p) => p.id !== id))
+        } catch (err) {
+            console.error('Payment action failed', err)
+            alert('Action failed')
+        } finally {
+            processingIds.current.delete(id)
+        }
+    }
+
+    async function toggleSeller(id: number, action: 'approve' | 'suspend') {
+        if (processingIds.current.has(id)) return
+        processingIds.current.add(id)
+        try {
+            const { data } = await api.post(`/api/admin/sellers/${id}/${action}/`)
+            // update local sellers list
+            setSellers((prev) => prev.map((s) => (s.id === id ? { ...s, ...data } : s)))
+        } catch (err) {
+            console.error('Seller action failed', err)
+            alert('Seller action failed')
+        } finally {
+            processingIds.current.delete(id)
+        }
     }
 
     return (
@@ -72,12 +104,13 @@ export default function AdminPanel() {
                         { label: "Reviews", icon: MessageSquare, key: "reviews" },
                         { label: "System", icon: Server, key: "system" },
                         { label: "Users", icon: Users, key: "users" },
+                        { label: "Sellers", icon: Users, key: "sellers" },
                         { label: "Reports", icon: BarChart3, key: "reports" },
                         { label: "Settings", icon: Settings, key: "settings" }
                     ].map(({ label, icon: Icon, key }) => (
                         <button
                             key={key}
-                            onClick={() => setTab(key as "dashboard" | "payments" | "reviews" | "system" | "users" | "reports" | "settings")}
+                            onClick={() => setTab(key as any)}
                             className={`flex items-center w-full px-3 py-2 rounded-lg text-sm font-medium transition-all ${tab === key
                                 ? "bg-indigo-600 text-white shadow-md"
                                 : "text-gray-700 dark:text-gray-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -143,11 +176,31 @@ export default function AdminPanel() {
                                 </div>
                                 <div className="flex gap-2">
                                     <a href={p.screenshot} target="_blank" className="text-indigo-600 underline text-sm">View</a>
-                                    <button onClick={() => act(p.id, "approve")} className="bg-green-600 text-white px-3 py-1 rounded-md">Approve</button>
-                                    <button onClick={() => act(p.id, "reject")} className="bg-red-600 text-white px-3 py-1 rounded-md">Reject</button>
+                                    <button onClick={() => act(p.id, "approve")} disabled={processingIds.current.has(p.id)} className="bg-green-600 text-white px-3 py-1 rounded-md disabled:opacity-60">{processingIds.current.has(p.id) ? 'Processing' : 'Approve'}</button>
+                                    <button onClick={() => act(p.id, "reject")} disabled={processingIds.current.has(p.id)} className="bg-red-600 text-white px-3 py-1 rounded-md disabled:opacity-60">{processingIds.current.has(p.id) ? 'Processing' : 'Reject'}</button>
                                 </div>
                             </div>
                         ))}
+                    </Section>
+                )}
+
+                {tab === 'sellers' && (
+                    <Section title="Manage Sellers">
+                        {sellers.length === 0 && <div className="text-sm text-muted">No sellers found.</div>}
+                        <div className="space-y-3">
+                            {sellers.map((s) => (
+                                <div key={s.id} className="p-3 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-md flex items-center justify-between">
+                                    <div>
+                                        <div className="font-medium">{s.name || s.username}</div>
+                                        <div className="text-xs text-muted">{s.email}</div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => toggleSeller(s.id, 'approve')} disabled={processingIds.current.has(s.id)} className="px-3 py-1 rounded bg-green-600 text-white disabled:opacity-60">{processingIds.current.has(s.id) ? '...' : (s.approved ? 'Approved' : 'Approve')}</button>
+                                        <button onClick={() => toggleSeller(s.id, 'suspend')} disabled={processingIds.current.has(s.id)} className="px-3 py-1 rounded bg-red-600 text-white disabled:opacity-60">{processingIds.current.has(s.id) ? '...' : (s.suspended ? 'Suspended' : 'Suspend')}</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </Section>
                 )}
 

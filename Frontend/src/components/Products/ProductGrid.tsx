@@ -98,21 +98,21 @@ export default function ProductGrid({
 
     if (loading)
         return (
-            <section className="px-4 md:px-10 py-16 bg-gray-50 text-center">
-                <div className="animate-pulse text-gray-400 text-lg">Loading products...</div>
+            <section className="px-4 md:px-10 py-16 bg-surface text-center">
+                <div className="animate-pulse text-muted text-lg">Loading products...</div>
             </section>
         )
 
     if (error)
         return (
-            <section className="px-4 md:px-10 py-16 bg-gray-50 text-center text-red-500 font-medium">
+            <section className="px-4 md:px-10 py-16 bg-surface text-center text-red-500 font-medium">
                 {error}
             </section>
         )
 
     if (!products.length)
         return (
-            <section className="px-4 md:px-10 py-16 bg-gray-50 text-center text-gray-500">
+            <section className="px-4 md:px-10 py-16 bg-surface text-center text-muted">
                 No products found.
             </section>
         )
@@ -121,10 +121,10 @@ export default function ProductGrid({
         <div className="md:flex relative min-h-screen">
             <FilterSidebar onFilterChange={setFilters} />
             
-            <section className="flex-1 px-4 md:px-8 py-6 md:py-10 bg-gray-50">
+            <section className="flex-1 px-4 md:px-8 py-6 md:py-10 bg-surface">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <h2 className="text-xl md:text-2xl font-bold text-gray-800">Products</h2>
-                    <div className="text-sm text-gray-600">
+                    <h2 className="text-xl md:text-2xl font-bold text-default">Products</h2>
+                    <div className="text-sm text-muted">
                         Showing {products.length} of {totalProducts} products
                     </div>
                 </div>

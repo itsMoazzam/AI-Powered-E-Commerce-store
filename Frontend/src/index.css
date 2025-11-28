@@ -34,3 +34,77 @@
     box-shadow: 0 0 0 2px #6366f1;
     /* focus:ring-2 focus:ring-indigo-500 */
 }
+
+/* Theme variables and helpers */
+:root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --muted: #6b7280;
+    --text: #111827;
+    --border: #e5e7eb;
+    --color-primary: #6366f1; /* default indigo */
+    --text-ontop: #ffffff;
+    --navbar-grad-start: #ffffff;
+    --navbar-grad-end: #f3f4f6;
+    --contrast: 100%;
+}
+
+/* dark theme overrides */
+:root[data-theme='dark'] {
+    --bg: #0b1220;
+    --surface: #071026;
+    --muted: #9ca3af;
+    --text: #e6eef8;
+    --border: #1f2937;
+    --text-ontop: #e6eef8;
+    --navbar-grad-start: #071026;
+    --navbar-grad-end: #081124;
+}
+
+/* quick utility mappings for common elements to use variables */
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    filter: contrast(var(--contrast));
+}
+
+.bg-surface { background-color: var(--surface) !important }
+.text-muted { color: var(--muted) !important }
+.border-theme { border-color: var(--border) !important }
+
+.btn-primary { background-color: var(--color-primary); color: white }
+.btn-primary:hover { filter: brightness(0.95) }
+.btn-outline { border: 1px solid var(--border); background: transparent }
+
+.text-primary { color: var(--color-primary) !important }
+.text-default { color: var(--text) !important }
+.text-on-hero { color: var(--text-ontop) !important }
+
+/* make common Tailwind-like utility fallbacks use theme vars where practical */
+.bg-card { background-color: var(--surface) }
+.border-card { border-color: var(--border) }
+
+/* Navbar visuals */
+.nav-gradient { background: linear-gradient(90deg, var(--navbar-grad-start), var(--navbar-grad-end)); }
+.logo-spin { display:inline-block; transform-origin:center; animation: logo-rotate 6s linear infinite; }
+@keyframes logo-rotate { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
+.notif-badge { background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 999px }
+
+/* small responsive helpers used in navbar modifications */
+@media (max-width: 768px) {
+    .nav-hide-sm { display: none !important }
+}
+
+/* Compatibility overrides: map common Tailwind color utility classes to theme variables
+   This allows components that still use Tailwind color utilities to respect the CSS variables
+   provided by ThemeProvider without changing every component. These rules are intentionally
+   broad and use `!important` to win over generated Tailwind rules loaded earlier. */
+.text-gray-900, .text-gray-800, .text-gray-700 { color: var(--text) !important }
+.text-gray-600, .text-gray-500, .text-gray-400 { color: var(--muted) !important }
+.bg-white { background-color: var(--surface) !important }
+.bg-gray-50, .bg-gray-100, .bg-gray-200 { background-color: var(--bg) !important }
+.border-gray-100, .border-gray-200, .border-gray-300 { border-color: var(--border) !important }
+.text-default { color: var(--text) !important }
+.bg-surface { background-color: var(--surface) !important }
+.text-muted { color: var(--muted) !important }
+.border-card { border-color: var(--border) !important }

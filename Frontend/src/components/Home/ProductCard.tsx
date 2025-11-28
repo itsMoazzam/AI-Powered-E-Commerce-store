@@ -25,7 +25,7 @@ export default function ProductCard({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-100"
+            className="bg-surface rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-card"
         >
             <Link to={`/product/${product.id}`} >
                 {/* Image */}
@@ -51,12 +51,11 @@ export default function ProductCard({
 
                 {/* Info */}
                 <div className="p-4 space-y-1">
-                    <h3 className="font-semibold text-gray-900 line-clamp-1">
+                    <h3 className="font-semibold text-default line-clamp-1">
                         {product.title}
                     </h3>
-
-                    <div className="text-sm text-gray-600 flex items-center gap-2">
-                        <span className="text-indigo-600 font-medium">
+                    <div className="text-sm text-muted flex items-center gap-2">
+                        <span className="text-primary font-medium">
                             ${Number(product.price).toFixed(2)}
 
                         </span>
@@ -72,12 +71,12 @@ export default function ProductCard({
                                     fill={idx < Math.round(product.rating!) ? "currentColor" : "none"}
                                 />
                             ))}
-                            <span className="ml-1 text-gray-500">{product.rating.toFixed(1)}</span>
+                            <span className="ml-1 text-muted">{product.rating.toFixed(1)}</span>
                         </div>
                     )}
 
                     {/* Add to Cart Button */}
-                    <button className="w-full bg-indigo-600 text-white text-sm font-medium py-2 rounded-lg mt-3 opacity-0 group-hover:opacity-100 transition-all hover:bg-indigo-700">
+                    <button className="w-full btn-primary text-white text-sm font-medium py-2 rounded-lg mt-3 opacity-0 group-hover:opacity-100 transition-all">
                         Add to Cart
                     </button>
                 </div>

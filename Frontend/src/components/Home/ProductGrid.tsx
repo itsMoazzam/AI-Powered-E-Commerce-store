@@ -44,32 +44,32 @@ export default function ProductGrid() {
 
     if (loading)
         return (
-            <section className="px-4 md:px-10 py-16 bg-gray-50 text-center">
-                <div className="animate-pulse text-gray-400 text-lg">Loading products...</div>
+            <section className="px-4 md:px-10 py-16 bg-surface text-center">
+                <div className="animate-pulse text-muted text-lg">Loading products...</div>
             </section>
         )
 
     if (error)
         return (
-            <section className="px-4 md:px-10 py-16 bg-gray-50 text-center text-red-500 font-medium">
+            <section className="px-4 md:px-10 py-16 bg-surface text-center text-red-500 font-medium">
                 {error}
             </section>
         )
 
     if (!products.length)
         return (
-            <section className="px-4 md:px-10 py-16 bg-gray-50 text-center text-gray-500">
+            <section className="px-4 md:px-10 py-16 bg-surface text-center text-muted">
                 No products found.
             </section>
         )
 
     return (
-        <section className="px-4 md:px-10 py-10 bg-gray-50">
+        <section className="px-4 md:px-10 py-10 bg-surface">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">✨ Featured Products</h2>
+                <h2 className="text-2xl font-bold text-default">✨ Featured Products</h2>
                 <Link
                     to="/search"
-                    className="text-blue-600 hover:text-blue-700 text-sm font-medium transition"
+                    className="text-primary hover:opacity-90 text-sm font-medium transition"
                 >
                     View All →
                 </Link>

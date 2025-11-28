@@ -14,6 +14,7 @@ export default function SellerSidebar({ view, setView, productCount }: SellerSid
     const menuItems = [
         { id: "products", label: "Products", icon: <Package className="w-4 h-4" />, count: productCount },
         { id: "add", label: "Add Product", icon: <PlusCircle className="w-4 h-4" /> },
+        { id: "orders", label: "Orders", icon: <FileText className="w-4 h-4" /> },
         { id: "payments", label: "Payments", icon: <CreditCard className="w-4 h-4" /> },
         { id: "reviews", label: "Reviews", icon: <FileText className="w-4 h-4" /> },
         { id: "system", label: "System Health", icon: <Server className="w-4 h-4" /> },

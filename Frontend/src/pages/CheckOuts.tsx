@@ -1,6 +1,8 @@
 import { useState } from "react"
 import api from "../lib/api"
 import { Loader2, CreditCard, ShoppingBag } from "lucide-react"
+import ReceiptUpload from "../components/ReceiptUpload"
+import { printInvoice } from "../lib/invoice"
 
 type Address = {
     first_name?: string
@@ -20,6 +22,10 @@ export default function Checkout() {
     const [address, setAddress] = useState<Address>({})
     const [deliveryMethod, setDeliveryMethod] = useState<"standard" | "express">("standard")
     const [payment, setPayment] = useState({ cardNumber: "", expiry: "", cvv: "" })
+    const [coupon, setCoupon] = useState("")
+    const [discount, setDiscount] = useState(0)
+    const [paymentOptions, setPaymentOptions] = useState<{ id: string, label: string }[]>([])
+    const [selectedPayment, setSelectedPayment] = useState<string | null>(null)
 
     // Dummy cart items
     const items = [
@@ -29,7 +35,7 @@ export default function Checkout() {
     const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0)
     const shippingFee = deliveryMethod === "express" ? 15 : 0
     const tax = subtotal * 0.1
-    const total = subtotal + shippingFee + tax
+    const total = subtotal + shippingFee + tax - discount
 
     async function placeOrder() {
         if (!address.first_name || !address.last_name || !address.line1 || !address.city || !address.postal_code) {
@@ -44,18 +50,42 @@ export default function Checkout() {
 
         setLoading(true)
         try {
-            const order = {
-                shipping_address: address,
-                items,
-                delivery_method: deliveryMethod,
-                payment,
-            }
-            const { data } = await api.post("/api/orders/", order)
-            console.log("Order placed:", data)
-            alert("✅ Order placed successfully!")
-            setStep(1)
-            setAddress({})
-            setPayment({ cardNumber: "", expiry: "", cvv: "" })
+                const order = {
+                    shipping_address: address,
+                    items,
+                    delivery_method: deliveryMethod,
+                    payment_method: selectedPayment || 'online',
+                    payment,
+                    coupon: coupon || null,
+                    total,
+                }
+
+                const { data } = await api.post("/api/orders/", order)
+                console.log("Order placed:", data)
+
+                // attempt to log order details server-side (if endpoint exists)
+                try {
+                    await api.post('/api/orders/log/', { order_id: data.id || null, payload: order })
+                } catch (err) {
+                    // non-fatal — logging endpoint may not exist
+                    console.debug('order log endpoint missing or failed', err)
+                }
+
+                // log locally
+                try {
+                    const raw = localStorage.getItem('orderHistory')
+                    const arr = raw ? JSON.parse(raw) : []
+                    arr.unshift({ id: data.id || Date.now(), total: total, created_at: new Date().toISOString(), items: order.items })
+                    localStorage.setItem('orderHistory', JSON.stringify(arr))
+                } catch {}
+
+                alert("✅ Order placed successfully!")
+                // open printable invoice
+                try { printInvoice({ id: data.id || 'N/A', shipping_address: address, items, total }) } catch (err) { console.warn(err) }
+
+                setStep(1)
+                setAddress({})
+                setPayment({ cardNumber: "", expiry: "", cvv: "" })
         } catch (err) {
             console.error("Failed to place order", err)
             alert("❌ Something went wrong.")
@@ -64,10 +94,46 @@ export default function Checkout() {
         }
     }
 
+    async function fetchPaymentOptions() {
+        try {
+            const { data } = await api.get('/api/payments/options/')
+            if (Array.isArray(data) && data.length) {
+                setPaymentOptions(data)
+                setSelectedPayment(data[0].id)
+            } else {
+                // fallback default
+                setPaymentOptions([{ id: 'online', label: 'Online' }, { id: 'cod', label: 'Cash on Delivery' }])
+                setSelectedPayment('online')
+            }
+        } catch (err) {
+            setPaymentOptions([{ id: 'online', label: 'Online' }, { id: 'cod', label: 'Cash on Delivery' }])
+            setSelectedPayment('online')
+        }
+    }
+
+    async function applyCoupon() {
+        if (!coupon.trim()) return alert('Enter coupon code')
+        try {
+            const { data } = await api.get(`/api/discounts/validate/?code=${encodeURIComponent(coupon)}`)
+            if (data && data.amount) {
+                setDiscount(data.amount)
+                alert('Coupon applied')
+            } else {
+                alert('Invalid coupon')
+            }
+        } catch (err) {
+            console.error(err)
+            alert('Failed to validate coupon')
+        }
+    }
+
+    // load payment options on mount
+    useState(() => { fetchPaymentOptions() })
+
     return (
         <div className="container mx-auto px-4 py-10 grid md:grid-cols-3 gap-8">
             {/* LEFT SIDE: CHECKOUT STEPS */}
-            <div className="md:col-span-2 bg-white rounded-2xl shadow-lg p-6 space-y-6">
+            <div className="md:col-span-2 bg-surface rounded-2xl shadow-lg p-6 space-y-6 border-theme border">
                 {/* Step Indicator */}
                 <div className="flex justify-between items-center border-b pb-3">
                     <h2 className="text-2xl font-semibold text-indigo-700 flex items-center gap-2">
@@ -92,8 +158,20 @@ export default function Checkout() {
                             <input placeholder="Phone (optional)" className="input border rounded-lg px-4 py-2"
                                 value={address.phone || ""} onChange={(e) => setAddress({ ...address, phone: e.target.value })} />
                         </div>
-                        <button className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700"
+                        <button className="mt-6 w-full btn-primary py-3 rounded-lg font-medium"
                             onClick={() => setStep(2)}>Continue to Shipping</button>
+                    </div>
+                )}
+
+                {/* coupon input (small) */}
+                {step === 1 && (
+                        <div className="mt-3">
+                        <label className="text-sm font-medium">Have a coupon?</label>
+                        <div className="flex gap-2 mt-2">
+                            <input value={coupon} onChange={(e) => setCoupon(e.target.value)} className="input-field" placeholder="Coupon code" />
+                            <button onClick={applyCoupon} className="btn-primary px-4 py-2">Apply</button>
+                        </div>
+                        {discount > 0 && <div className="text-sm text-green-600 mt-2">Discount applied: ${discount.toFixed(2)}</div>}
                     </div>
                 )}
 
@@ -114,8 +192,8 @@ export default function Checkout() {
                                 value={address.country || ""} onChange={(e) => setAddress({ ...address, country: e.target.value })} />
                         </div>
                         <div className="flex justify-between mt-6">
-                            <button className="px-4 py-2 rounded-lg border" onClick={() => setStep(1)}>Back</button>
-                            <button className="px-6 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+                            <button className="px-4 py-2 rounded-lg btn-outline" onClick={() => setStep(1)}>Back</button>
+                            <button className="px-6 py-2 rounded-lg btn-primary"
                                 onClick={() => setStep(3)}>Continue to Delivery</button>
                         </div>
                     </div>
@@ -144,8 +222,8 @@ export default function Checkout() {
                         </div>
 
                         <div className="flex justify-between mt-6">
-                            <button className="px-4 py-2 rounded-lg border" onClick={() => setStep(2)}>Back</button>
-                            <button className="px-6 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+                            <button className="px-4 py-2 rounded-lg btn-outline" onClick={() => setStep(2)}>Back</button>
+                            <button className="px-6 py-2 rounded-lg btn-primary"
                                 onClick={() => setStep(4)}>Continue to Payment</button>
                         </div>
                     </div>
@@ -155,18 +233,42 @@ export default function Checkout() {
                 {step === 4 && (
                     <div>
                         <h3 className="text-xl font-semibold mb-4">4️⃣ Payment Method</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <input placeholder="Card Number *" className="input border rounded-lg px-4 py-2"
-                                value={payment.cardNumber} onChange={(e) => setPayment({ ...payment, cardNumber: e.target.value })} />
-                            <input placeholder="Expiry (MM/YY) *" className="input border rounded-lg px-4 py-2"
-                                value={payment.expiry} onChange={(e) => setPayment({ ...payment, expiry: e.target.value })} />
-                            <input placeholder="CVV *" className="input border rounded-lg px-4 py-2"
-                                value={payment.cvv} onChange={(e) => setPayment({ ...payment, cvv: e.target.value })} />
+                        <div className="space-y-3">
+                            <div className="text-sm text-zinc-600">Available payment options:</div>
+                            <div className="flex gap-2 flex-wrap">
+                                {paymentOptions.map((opt) => (
+                                    <button key={opt.id} onClick={() => setSelectedPayment(opt.id)} className={`px-3 py-2 rounded-lg border ${selectedPayment === opt.id ? 'bg-indigo-50 border-indigo-600' : ''}`}>
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {selectedPayment === 'online' && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <input placeholder="Card Number *" className="input border rounded-lg px-4 py-2"
+                                        value={payment.cardNumber} onChange={(e) => setPayment({ ...payment, cardNumber: e.target.value })} />
+                                    <input placeholder="Expiry (MM/YY) *" className="input border rounded-lg px-4 py-2"
+                                        value={payment.expiry} onChange={(e) => setPayment({ ...payment, expiry: e.target.value })} />
+                                    <input placeholder="CVV *" className="input border rounded-lg px-4 py-2"
+                                        value={payment.cvv} onChange={(e) => setPayment({ ...payment, cvv: e.target.value })} />
+                                </div>
+                            )}
+
+                            {selectedPayment === 'cod' && (
+                                <div className="text-sm text-zinc-600">Cash on Delivery selected. You'll pay the courier on delivery.</div>
+                            )}
+
+                            {/* allow receipt upload for offline payment verification */}
+                            {selectedPayment && selectedPayment !== 'online' && (
+                                <div className="mt-2">
+                                    <ReceiptUpload onVerified={(ok, info) => { if (ok) alert('Receipt processed') }} />
+                                </div>
+                            )}
                         </div>
                         <div className="flex justify-between mt-6">
-                            <button className="px-4 py-2 rounded-lg border" onClick={() => setStep(3)}>Back</button>
+                            <button className="px-4 py-2 rounded-lg btn-outline" onClick={() => setStep(3)}>Back</button>
                             <button onClick={placeOrder} disabled={loading}
-                                className={`px-6 py-2 rounded-lg text-white font-medium flex items-center gap-2 justify-center ${loading ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"}`}>
+                                className={`px-6 py-2 rounded-lg text-white font-medium flex items-center gap-2 justify-center ${loading ? "bg-indigo-400" : "btn-primary"}`}>
                                 {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> Placing...</> : <><CreditCard className="w-5 h-5" /> Confirm Order</>}
                             </button>
                         </div>
@@ -175,7 +277,7 @@ export default function Checkout() {
             </div>
 
             {/* RIGHT SIDE: ORDER SUMMARY */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 h-fit sticky top-8">
+            <div className="bg-surface rounded-2xl shadow-lg p-6 h-fit sticky top-8 border-theme border">
                 <h3 className="text-xl font-semibold mb-4 text-zinc-800 flex items-center gap-2">
                     <ShoppingBag className="w-5 h-5 text-indigo-600" /> Order Summary
                 </h3>
@@ -197,7 +299,7 @@ export default function Checkout() {
                         <span>Total</span><span>${total.toFixed(2)}</span>
                     </div>
                 </div>
-                <div className="mt-6 text-sm text-zinc-500">
+                <div className="mt-6 text-sm text-muted">
                     All orders are processed securely with SSL encryption.
                 </div>
             </div>
