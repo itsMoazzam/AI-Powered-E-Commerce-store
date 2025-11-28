@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom'
 
 const API_BASE = "http://127.0.0.1:8000/api";
 
 export default function CartDrawer({ open, setOpen }: { open: boolean; setOpen: (val: boolean) => void }) {
     const [cartItems, setCartItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate()
 
     const token = localStorage.getItem('access');
 
@@ -59,11 +61,11 @@ export default function CartDrawer({ open, setOpen }: { open: boolean; setOpen: 
             <div className="fixed inset-0 overflow-hidden">
                 <div className="absolute inset-0 overflow-hidden">
                     <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
-                        <DialogPanel className="pointer-events-auto w-screen max-w-md transform transition-all bg-white shadow-2xl">
+                        <DialogPanel className="pointer-events-auto w-screen max-w-md transform transition-all bg-surface shadow-2xl border-theme border">
                             <div className="flex h-full flex-col overflow-y-auto">
                                 {/* Header */}
-                                <div className="flex items-start justify-between px-6 py-4 border-b">
-                                    <DialogTitle className="text-lg font-semibold text-gray-800">🛒 Your Cart</DialogTitle>
+                                <div className="flex items-start justify-between px-6 py-4 border-b border-theme">
+                                    <DialogTitle className="text-lg font-semibold">🛒 Your Cart</DialogTitle>
                                     <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-gray-800">
                                         <XMarkIcon className="h-6 w-6" />
                                     </button>
@@ -92,7 +94,7 @@ export default function CartDrawer({ open, setOpen }: { open: boolean; setOpen: 
                                                         <p className="mt-1 text-sm text-gray-500">Qty: {item.quantity}</p>
                                                         <button
                                                             onClick={() => removeItem(item.id)}
-                                                            className="mt-auto text-sm text-indigo-600 hover:text-indigo-800"
+                                                            className="mt-auto text-sm text-primary hover:underline"
                                                         >
                                                             Remove
                                                         </button>
@@ -104,17 +106,18 @@ export default function CartDrawer({ open, setOpen }: { open: boolean; setOpen: 
                                 </div>
 
                                 {/* Footer */}
-                                <div className="border-t border-gray-200 px-6 py-4">
-                                    <div className="flex justify-between text-base font-semibold text-gray-900">
+                                <div className="border-t px-6 py-4 border-theme">
+                                    <div className="flex justify-between text-base font-semibold">
                                         <p>Subtotal</p>
                                         <p>${subtotal.toFixed(2)}</p>
                                     </div>
-                                    <p className="mt-1 text-sm text-gray-500">
+                                    <p className="mt-1 text-sm text-muted">
                                         Shipping and taxes calculated at checkout.
                                     </p>
                                     <button
                                         disabled={!cartItems.length}
-                                        className="mt-6 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-white hover:bg-indigo-700 disabled:bg-gray-400"
+                                        onClick={() => { setOpen(false); navigate('/checkout') }}
+                                        className="mt-6 w-full rounded-lg btn-primary px-4 py-2.5 disabled:opacity-60"
                                     >
                                         Proceed to Checkout
                                     </button>

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react'
+import { Suspense, lazy } from 'react'
 import { Route, Routes, Navigate } from 'react-router-dom'
 import RootLayout from './components/layouts/RootLayout'
 import AuthLayout from './components/layouts/AuthLayout'
@@ -13,6 +13,7 @@ const ProductDetail = lazy(() => import('./pages/Products/ProductDetail'))
 const Home = lazy(() => import('./pages/Home'))
 const Cart = lazy(() => import('./pages/Cart'))
 const Checkout = lazy(() => import('./pages/CheckOuts'))
+const OrderHistory = lazy(() => import('./pages/OrderHistory'))
 const AdminPanel = lazy(() => import('./pages/admin/AdminPanel'))
 const SellerDashboard = lazy(() => import('./pages/seller/SellerDashboard'))
 const Login = lazy(() => import('./pages/auth/Login'))
@@ -34,6 +35,7 @@ function App() {
           <Route path="/cart" element={<Protected allow={['customer']}><Cart /></Protected>} />
           <Route path='/profile' element={<Protected allow={['customer', 'seller', 'admin']}><Profile /></Protected>} />
           <Route path="/checkout" element={<Protected allow={['customer']}><Checkout /></Protected>} />
+          <Route path="/orders" element={<Protected allow={['customer']}><OrderHistory /></Protected>} />
           <Route path="/admin" element={<Protected allow={['admin']}><AdminPanel /></Protected>} />
           <Route path="/seller" element={<Protected allow={['seller']}><SellerDashboard /></Protected>} />
 

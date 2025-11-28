@@ -1,8 +1,12 @@
+
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Sun, Moon } from "lucide-react";
 import { FaShoppingCart, FaSearch, FaHeart, FaHome } from "react-icons/fa";
 import CartDrawer from "./Cart";
+import { useTheme } from '../../theme/ThemeProvider'
+import { useSelector } from 'react-redux'
+import type { RootState } from '../../store'
 import api from "../../lib/api";
 import Tooltip from "@mui/material/Tooltip";
 import Box from "@mui/material/Box";
@@ -38,18 +42,29 @@ export default function NavBar() {
     const positionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const popperRef = useRef<Instance>(null);
     const areaRef = useRef<HTMLDivElement>(null);
+    const { theme, toggle, setPrimary, setText, setBg, setSurface, setContrast, text, bg, surface, contrast } = useTheme();
+    const cartCount = useSelector((s: RootState) => s.cart.items?.length || 0)
+    const [notificationsOpen, setNotificationsOpen] = useState(false)
+    const [notifications, setNotifications] = useState<any[]>([])
+    const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const handleMouseMove = (event: React.MouseEvent) => {
         positionRef.current = { x: event.clientX, y: event.clientY };
         if (popperRef.current) popperRef.current.update();
     };
 
-    // Fetch categories and user
+    // Fetch categories and user (abort previous if any)
     useEffect(() => {
+        let isMounted = true;
+        setLoading(true);
         api.get("/api/products/categories/")
-            .then((res) => setCategories(res.data))
-            .catch(console.error)
-            .finally(() => setLoading(false));
+            .then((res) => {
+                if (isMounted) setCategories(res.data)
+            })
+            .catch((err) => {
+                if (isMounted) console.error(err)
+            })
+            .finally(() => { if (isMounted) setLoading(false) })
 
         try {
             const raw = localStorage.getItem("user");
@@ -78,9 +93,38 @@ export default function NavBar() {
         } catch {
             // ignore
         }
-    }, []);
+
+        return () => { isMounted = false; };
+    // load a small notifications preview (non-critical)
+    useEffect(() => {
+        let isMounted = true;
+        (async () => {
+            try {
+                const { data } = await api.get('/api/notifications/?limit=5')
+                if (isMounted) setNotifications(Array.isArray(data) ? data : [])
+            } catch (err) {
+                // ignore — endpoint optional
+            }
+        })()
+        return () => { isMounted = false; }
+    }, [])
+        return () => { isMounted = false }
+    }, [])
 
     const handleCartToggle = () => setCartOpen(!cartOpen);
+
+    const handlePrimaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setPrimary(e.target.value)
+    }
+
+    const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setText(e.target.value)
+    }
+
+    const handleContrastChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = Number(e.target.value)
+        if (!Number.isNaN(val) && val > 0) setContrast(val)
+    }
 
     const handleLogout = () => {
         // close menu first so UI updates immediately
@@ -93,9 +137,13 @@ export default function NavBar() {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        if (searchQuery.trim()) {
-            window.location.href = `/search?query=${encodeURIComponent(searchQuery)}`;
-        }
+        if (searchTimer.current) clearTimeout(searchTimer.current)
+        // debounce quick typing
+        searchTimer.current = setTimeout(() => {
+            if (searchQuery.trim()) {
+                window.location.href = `/search?query=${encodeURIComponent(searchQuery)}`;
+            }
+        }, 350)
     };
 
     const openMenu = menuHovered || menuOpen;
@@ -148,16 +196,16 @@ export default function NavBar() {
 
     return (
         <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 w-full">
-            <div className="w-full px-4 md:px-6 lg:px-10 flex items-center justify-between h-16 gap-4">
+                <div className="w-full px-4 md:px-6 lg:px-10 flex items-center justify-between h-16 gap-4 nav-gradient">
 
                 {/* Left side: Logo + Hamburger */}
                 <div className="flex items-center gap-4">
-                    <Link to="/" className="flex items-center gap-2 text-2xl font-extrabold text-gray-900">
+                    <Link to="/" className="flex items-center gap-2 text-2xl font-extrabold text-default">
                         <img
                             src="https://i.ibb.co/NnSYYC6d/Gemini-Generated-Image-6xewhm6xewhm6xew-1.png"
                             alt="logo"
                             width={45}
-                            className="rounded-full"
+                            className="rounded-full logo-spin"
                         />
 
                         <Tooltip
@@ -206,7 +254,7 @@ export default function NavBar() {
 
                         {openMenu && (
                             <div
-                                className="absolute top-full left-0 w-64 bg-white shadow-lg border rounded-md mt-2 z-50"
+                                className="absolute top-full left-0 w-64 bg-surface shadow-lg border-card rounded-md mt-2 z-50"
                                 onMouseEnter={clearMenuTimeout}
                                 onMouseLeave={delayedCloseMenu}
                             >
@@ -259,14 +307,14 @@ export default function NavBar() {
                 {/* Search bar */}
                 <form
                     onSubmit={handleSearch}
-                    className="flex-1 flex items-center max-w-xl mx-auto bg-gray-100 rounded-full px-3 py-1.5"
+                    className="flex-1 flex items-center max-w-xl mx-auto bg-gray-100/60 dark:bg-zinc-800 rounded-full px-3 py-1.5"
                 >
                     <input
                         type="text"
                         placeholder="Search products..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="flex-1 bg-transparent outline-none text-sm px-2 text-gray-800"
+                        className="flex-1 bg-transparent outline-none text-sm px-2 text-default"
                     />
                     <button
                         type="submit"
@@ -294,10 +342,13 @@ export default function NavBar() {
                             <div className="relative">
                                 <button
                                     onClick={handleCartToggle}
-                                    className="p-2 text-blue-500 rounded-md hover:bg-gray-100 cursor-pointer"
+                                    className="p-2 text-blue-500 rounded-md hover:bg-gray-100 cursor-pointer relative"
                                     aria-label="Open cart"
                                 >
                                     <FaShoppingCart size={18} />
+                                    {cartCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{cartCount}</span>
+                                    )}
                                 </button>
                                 <CartDrawer open={cartOpen} setOpen={setCartOpen} />
                             </div>
@@ -371,6 +422,71 @@ export default function NavBar() {
                         </div>
                     )}
                 </div>
+
+                    {/* Theme toggle + color picker */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            title="Toggle theme"
+                            onClick={toggle}
+                            className="p-2 rounded-md hover:bg-gray-100 nav-hide-sm"
+                        >
+                            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                        </button>
+
+                        <input
+                            aria-label="Primary color"
+                            title="Pick primary color"
+                            type="color"
+                            defaultValue={String((window?.getComputedStyle?.(document.documentElement) || {}).getPropertyValue('--color-primary') || '#6366f1').trim()}
+                            onChange={handlePrimaryChange}
+                            className="w-8 h-8 p-0 border-0 bg-transparent"
+                        />
+
+                        <input
+                            aria-label="Text color"
+                            title="Pick text color"
+                            type="color"
+                            defaultValue={text || '#111827'}
+                            onChange={handleTextChange}
+                            className="w-8 h-8 p-0 border-0 bg-transparent"
+                        />
+
+                        <input
+                            aria-label="Contrast"
+                            title="Adjust contrast"
+                            type="range"
+                            min={50}
+                            max={150}
+                            defaultValue={String(contrast || 100)}
+                            onChange={handleContrastChange}
+                            className="w-20 h-2"
+                        />
+                    </div>
+
+                    {/* Notifications */}
+                    <div className="relative">
+                        <button onClick={() => setNotificationsOpen((s) => !s)} className="p-2 rounded-md hover:bg-gray-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-default" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z" />
+                                <path d="M9 18a2 2 0 104 0H9z" />
+                            </svg>
+                            {notifications.length > 0 && <span className="notif-badge -mt-2 -ml-2 inline-block">{notifications.length}</span>}
+                        </button>
+                        {notificationsOpen && (
+                            <div className="absolute right-0 mt-2 w-72 bg-surface border-card rounded-md shadow-lg p-2 z-50">
+                                <div className="text-sm font-medium mb-2">Notifications</div>
+                                <div className="space-y-2 max-h-60 overflow-auto">
+                                    {notifications.length === 0 && <div className="text-xs text-muted">No notifications</div>}
+                                    {notifications.map((n, i) => (
+                                        <div key={i} className="p-2 border-b border-card text-sm">
+                                            <div className="font-medium text-default">{n.title || 'Notification'}</div>
+                                            <div className="text-xs text-muted">{n.message || n.summary}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
             </div>
         </nav>
     );

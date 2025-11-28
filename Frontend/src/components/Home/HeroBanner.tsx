@@ -43,7 +43,7 @@ export default function HeroBanner() {
     const prevSlide = () => setCurrent((prev) => (prev - 1 + slides.length) % slides.length)
 
     return (
-        <div className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden rounded-3xl shadow-lg">
+        <div className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden rounded-3xl shadow-lg bg-card">
             {slides.map((slide, index) => (
                 <div
                     key={slide.id}
@@ -56,16 +56,16 @@ export default function HeroBanner() {
                         className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent" />
-                    <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-20 text-white">
+                    <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-20 text-on-hero">
                         <h1 className="text-4xl md:text-6xl font-bold leading-tight drop-shadow-lg">
                             {slide.title}
                         </h1>
-                        <p className="text-lg md:text-2xl mt-3 text-gray-200 max-w-xl">
+                        <p className="text-lg md:text-2xl mt-3 max-w-xl text-on-hero">
                             {slide.subtitle}
                         </p>
                         <Link
                             to={slide.link}
-                            className="w-1/7 text-center mt-6 inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-xl shadow-md transition-all duration-300"
+                            className="w-1/7 text-center mt-6 inline-block btn-primary text-white font-semibold px-6 py-3 rounded-xl shadow-md transition-all duration-300"
                         >
                             {slide.cta}
                         </Link>
