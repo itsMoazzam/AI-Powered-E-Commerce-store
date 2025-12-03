@@ -43,6 +43,8 @@
     --text: #111827;
     --border: #e5e7eb;
     --color-primary: #6366f1; /* default indigo */
+    --color-primary-text: #ffffff;
+    --surface-text: #000000;
     --text-ontop: #ffffff;
     --navbar-grad-start: #ffffff;
     --navbar-grad-end: #f3f4f6;
@@ -56,6 +58,8 @@
     --muted: #9ca3af;
     --text: #e6eef8;
     --border: #1f2937;
+    --color-primary-text: #ffffff;
+    --surface-text: #e6eef8;
     --text-ontop: #e6eef8;
     --navbar-grad-start: #071026;
     --navbar-grad-end: #081124;
@@ -72,7 +76,7 @@ body {
 .text-muted { color: var(--muted) !important }
 .border-theme { border-color: var(--border) !important }
 
-.btn-primary { background-color: var(--color-primary); color: white }
+.btn-primary { background-color: var(--color-primary); color: var(--color-primary-text); }
 .btn-primary:hover { filter: brightness(0.95) }
 .btn-outline { border: 1px solid var(--border); background: transparent }
 
@@ -101,10 +105,57 @@ body {
    broad and use `!important` to win over generated Tailwind rules loaded earlier. */
 .text-gray-900, .text-gray-800, .text-gray-700 { color: var(--text) !important }
 .text-gray-600, .text-gray-500, .text-gray-400 { color: var(--muted) !important }
-.bg-white { background-color: var(--surface) !important }
-.bg-gray-50, .bg-gray-100, .bg-gray-200 { background-color: var(--bg) !important }
+.bg-white { background-color: var(--surface) !important; color: var(--surface-text) !important }
+.bg-gray-50, .bg-gray-100, .bg-gray-200 { background-color: var(--bg) !important; color: var(--text) !important }
 .border-gray-100, .border-gray-200, .border-gray-300 { border-color: var(--border) !important }
 .text-default { color: var(--text) !important }
-.bg-surface { background-color: var(--surface) !important }
+.bg-surface { background-color: var(--surface) !important; color: var(--surface-text) !important }
 .text-muted { color: var(--muted) !important }
 .border-card { border-color: var(--border) !important }
+
+/* Professional theme utilities for cards and containers */
+.card { background-color: var(--surface); color: var(--surface-text); border-color: var(--border); }
+.card-title { color: var(--text); font-weight: 600; }
+.card-text { color: var(--muted); }
+.panel { background-color: var(--surface); color: var(--surface-text); }
+
+/* Action buttons with automatic text color */
+.btn-success, .btn-green { background-color: #10b981; color: #ffffff; }
+.btn-danger, .btn-red { background-color: #ef4444; color: #ffffff; }
+.btn-warning, .btn-yellow { background-color: #f59e0b; color: #000000; }
+.btn-info, .btn-blue { background-color: #3b82f6; color: #ffffff; }
+
+/* Extended compatibility mapping for common Tailwind utilities (colors + hover states)
+    This broad mapping ensures most UI elements respect the theme variables while
+    you migrate components away from hardcoded Tailwind color tokens. */
+.text-indigo-600, .text-indigo-500, .text-indigo-700 { color: var(--color-primary) !important }
+.bg-indigo-600, .bg-indigo-500, .bg-indigo-700 { background-color: var(--color-primary) !important; color: var(--color-primary-text) !important }
+.hover\:bg-indigo-600:hover { background-color: var(--color-primary) !important }
+.bg-blue-600, .bg-blue-500 { background-color: #3b82f6 !important; color: #fff !important }
+.text-blue-600, .text-blue-500 { color: #3b82f6 !important }
+.bg-green-600, .text-green-600 { background-color: #10b981 !important; color: #fff !important }
+.bg-red-600, .text-red-600 { background-color: #ef4444 !important; color: #fff !important }
+.bg-yellow-400, .text-yellow-600 { background-color: #f59e0b !important; color: #000 !important }
+.text-pink-500 { color: #ec4899 !important }
+.bg-gray-700, .text-gray-100 { background-color: var(--border) !important }
+.text-white { color: #ffffff !important }
+.text-black { color: #000000 !important }
+
+/* Hover & active helpers mapping to theme tokens where appropriate */
+.hover\:bg-gray-100:hover { background-color: var(--bg) !important }
+.hover\:bg-white:hover { background-color: var(--surface) !important }
+.hover\:text-primary:hover { color: var(--color-primary) !important }
+
+/* Map commonly used border/bg utility classes */
+.border-zinc-200, .border-gray-200 { border-color: var(--border) !important }
+.bg-zinc-50, .bg-gray-50 { background-color: var(--bg) !important }
+.bg-white { background-color: var(--surface) !important }
+
+/* Fallback for text opacity utilities to use muted color */
+.text-gray-500, .text-gray-400, .text-gray-600 { color: var(--muted) !important }
+
+/* Encourage usage of semantic tokens: these helpers can be used in new components */
+.text-primary { color: var(--color-primary) !important }
+.bg-primary { background-color: var(--color-primary) !important; color: var(--color-primary-text) !important }
+.text-default { color: var(--text) !important }
+.bg-surface { background-color: var(--surface) !important; color: var(--surface-text) !important }
