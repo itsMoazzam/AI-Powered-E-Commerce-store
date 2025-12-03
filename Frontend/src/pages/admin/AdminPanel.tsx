@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react"
 import { LayoutDashboard, CreditCard, MessageSquare, Server, Users, BarChart3, Settings, LogOut, Sun, Moon } from "lucide-react"
 import api from "../../lib/api"
+import { useTheme } from "../../theme/ThemeProvider"
 
 export default function AdminPanel() {
     const [tab, setTab] = useState<"dashboard" | "payments" | "reviews" | "system" | "users" | "sellers" | "reports" | "settings">("dashboard")
-    const [darkMode, setDarkMode] = useState(false)
+    const { theme, toggle } = useTheme()
 
     type Payment = {
         id: number
@@ -31,10 +32,6 @@ export default function AdminPanel() {
     const [users, setUsers] = useState([])
     const [sellers, setSellers] = useState<any[]>([])
     const processingIds = useRef<Set<number>>(new Set())
-
-    useEffect(() => {
-        document.documentElement.classList.toggle("dark", darkMode)
-    }, [darkMode])
 
     useEffect(() => {
         ; (async () => {
@@ -93,9 +90,9 @@ export default function AdminPanel() {
     return (
         <div className="flex h-screen bg-gray-100 dark:bg-zinc-950 transition-colors duration-300">
             {/* Sidebar */}
-            <aside className="w-72 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col shadow-md">
-                <div className="px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-                    <h1 className="text-xl font-bold text-indigo-600">Admin Portal</h1>
+            <aside className="w-72 bg-surface dark:bg-zinc-900 border-r border-card flex flex-col shadow-md">
+                <div className="px-6 py-5 border-b border-card flex items-center justify-between">
+                    <h1 className="text-xl font-bold text-default">Admin Portal</h1>
                 </div>
                 <nav className="flex-1 px-4 py-6 space-y-2">
                     {[
@@ -112,8 +109,8 @@ export default function AdminPanel() {
                             key={key}
                             onClick={() => setTab(key as any)}
                             className={`flex items-center w-full px-3 py-2 rounded-lg text-sm font-medium transition-all ${tab === key
-                                ? "bg-indigo-600 text-white shadow-md"
-                                : "text-gray-700 dark:text-gray-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                ? "btn-primary shadow-md"
+                                : "text-default hover:bg-gray-100 dark:hover:bg-zinc-800"
                                 }`}
                         >
                             <Icon className="w-4 h-4 mr-2" /> {label}
@@ -121,11 +118,11 @@ export default function AdminPanel() {
                     ))}
                 </nav>
 
-                <div className="px-4 py-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
-                    <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                        {darkMode ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-gray-600" />}
+                <div className="px-4 py-4 border-t border-card flex justify-between items-center">
+                    <button onClick={toggle} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800">
+                        {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-gray-600" />}
                     </button>
-                    <button className="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900">
+                    <button className="flex items-center px-3 py-2 rounded-lg text-sm font-medium btn-danger hover:opacity-90">
                         <LogOut className="w-4 h-4 mr-2" /> Logout
                     </button>
                 </div>
@@ -135,20 +132,20 @@ export default function AdminPanel() {
             <main className="flex-1 overflow-y-auto p-8">
                 {tab === "dashboard" && (
                     <div>
-                        <h2 className="text-2xl font-semibold mb-6">Overview</h2>
+                        <h2 className="text-2xl font-semibold mb-6 text-default">Overview</h2>
                         <div className="grid md:grid-cols-4 gap-6 mb-8">
                             {payments.slice(0, 5).map((p: Payment) => (
-                                <div key={p.id} className="flex justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
-                                    <span className="text-sm">Txn #{p.txn_id}</span>
-                                    <span className="text-sm font-medium text-indigo-600">{p.amount}</span>
+                                <div key={p.id} className="flex justify-between border-b border-card pb-2">
+                                    <span className="text-sm text-default">Txn #{p.txn_id}</span>
+                                    <span className="text-sm font-medium text-primary">{p.amount}</span>
                                 </div>
                             ))}
                         </div>
-                        <div className="p-6 bg-white dark:bg-zinc-900 rounded-xl shadow-md">
-                            <h3 className="font-medium mb-4">Recent Payments</h3>
+                        <div className="p-6 bg-surface border-card rounded-xl shadow-md">
+                            <h3 className="font-medium mb-4 text-default">Recent Payments</h3>
                             <div className="space-y-3">
                                 {payments.slice(0, 5).map((p: Payment) => (
-                                    <div key={p.id} className="flex justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                                    <div key={p.id} className="flex justify-between border-b border-card pb-2">
                                         <span className="text-sm">Txn #{p.txn_id}</span>
                                         <span className="text-sm font-medium text-indigo-600">{p.amount}</span>
                                     </div>
@@ -207,9 +204,9 @@ export default function AdminPanel() {
                 {tab === "reviews" && (
                     <Section title="Reviews">
                         {reviews.map((r: Review) => (
-                            <div key={r.id} className="p-4 border rounded-lg bg-white dark:bg-zinc-900 mb-3">
-                                <div className="text-sm mb-2">{r.text}</div>
-                                <div className="text-xs text-zinc-500">
+                            <div key={r.id} className="p-4 border-card rounded-lg bg-surface mb-3">
+                                <div className="text-sm mb-2 text-default">{r.text}</div>
+                                <div className="text-xs text-muted">
                                     Toxicity:{" "}
                                     <span className={`${r.toxicity > 0.7 ? "text-red-500" : r.toxicity > 0.3 ? "text-yellow-500" : "text-green-500"}`}>
                                         {Math.round(r.toxicity * 100)}%
@@ -242,8 +239,8 @@ export default function AdminPanel() {
 
 function Section({ title, children }: React.PropsWithChildren<{ title: string }>) {
     return (
-        <div className="card p-6 bg-white dark:bg-zinc-950 rounded-xl shadow-sm">
-            <h3 className="text-xl font-semibold mb-4">{title}</h3>
+        <div className="card p-6 bg-surface rounded-xl shadow-sm">
+            <h3 className="text-xl font-semibold mb-4 text-default">{title}</h3>
             {children}
         </div>
     )
@@ -251,9 +248,9 @@ function Section({ title, children }: React.PropsWithChildren<{ title: string }>
 
 function StatCard({ title, value }: { title: string; value: string | number }) {
     return (
-        <div className="p-6 bg-white dark:bg-zinc-900 rounded-xl shadow-md hover:scale-[1.02] transition-transform">
-            <div className="text-sm text-zinc-500 mb-2">{title}</div>
-            <div className="text-2xl font-semibold text-indigo-600">{value}</div>
+        <div className="p-6 bg-surface rounded-xl shadow-md hover:scale-[1.02] transition-transform">
+            <div className="text-sm text-muted mb-2">{title}</div>
+            <div className="text-2xl font-semibold text-primary">{value}</div>
         </div>
     )
 }

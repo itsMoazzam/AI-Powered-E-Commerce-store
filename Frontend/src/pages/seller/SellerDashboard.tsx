@@ -10,6 +10,7 @@ import ReportsPanel from "./components/ReportsPanel"
 import CSVUpload from "./components/CSVUpload"
 import OrdersPanel from "./components/OrdersPanel"
 import api from "../../lib/api"
+import { useTheme } from "../../theme/ThemeProvider"
 
 type View = "products" | "add" | "edit" | "payments" | "reviews" | "system" | "reports" | "bulk"
 // include orders view
@@ -28,6 +29,7 @@ export default function SellerDashboard() {
     const [products, setProducts] = useState<Product[]>([])
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
     const [sellerName, setSellerName] = useState<string | null>(null)
+    const { theme } = useTheme()
     // cast helpers to avoid cross-file prop type mismatches in this isolated edit
     const ProductListAny = ProductList as unknown as any
 
@@ -78,14 +80,14 @@ export default function SellerDashboard() {
     }
 
     return (
-        <div className="flex h-screen bg-zinc-50 dark:bg-zinc-900">
+        <div className="flex h-screen bg-gray-100 dark:bg-zinc-900">
             <SellerSidebar view={view} setView={(v: string) => setViewState(v as View)} productCount={products.length} />
 
             <main className="flex-1 overflow-y-auto p-6">
                 <div className="max-w-7xl mx-auto space-y-6">
                     <header className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">{sellerName ? `Welcome, ${sellerName}` : 'Manage products, upload 3D models, bulk import CSV and monitor system status'}</h1>
+                            <h1 className="text-2xl font-bold text-default">{sellerName ? `Welcome, ${sellerName}` : 'Manage products, upload 3D models, bulk import CSV and monitor system status'}</h1>
                         </div>
                         <div className="flex items-center gap-3">
                             <button onClick={() => setViewState("bulk")} className="btn-outline">Bulk Upload</button>

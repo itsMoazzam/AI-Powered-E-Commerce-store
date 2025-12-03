@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, Sun, Moon } from "lucide-react";
+import { Menu, X, Sun, Star } from "lucide-react";
 import { FaShoppingCart, FaSearch, FaHeart, FaHome } from "react-icons/fa";
 import CartDrawer from "./Cart";
 import { useTheme } from '../../theme/ThemeProvider'
@@ -42,10 +42,12 @@ export default function NavBar() {
     const positionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const popperRef = useRef<Instance>(null);
     const areaRef = useRef<HTMLDivElement>(null);
-    const { theme, toggle, setPrimary, setText, setBg, setSurface, setContrast, text, bg, surface, contrast } = useTheme();
+    const { theme, toggle, setPrimary, setText, setBg, setSurface, setTheme } = useTheme();
     const cartCount = useSelector((s: RootState) => s.cart.items?.length || 0)
     const [notificationsOpen, setNotificationsOpen] = useState(false)
     const [notifications, setNotifications] = useState<any[]>([])
+    const [topOpen, setTopOpen] = useState(false)
+    const [topSeller, setTopSeller] = useState<any>(null)
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const handleMouseMove = (event: React.MouseEvent) => {
@@ -113,17 +115,57 @@ export default function NavBar() {
 
     const handleCartToggle = () => setCartOpen(!cartOpen);
 
-    const handlePrimaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setPrimary(e.target.value)
+    // Theme presets (apply globally via ThemeProvider)
+    const themePresets = [
+        { name: 'Default', bg: '#ffffff', surface: '#ffffff', text: '#111827', primary: '#6366f1' },
+        { name: 'Midnight', bg: '#0b1220', surface: '#0f1724', text: '#e6eef8', primary: '#7c3aed' },
+        { name: 'Sage', bg: '#f6fffb', surface: '#ecfdf5', text: '#052e25', primary: '#10b981' },
+    ]
+    const [themeMenuOpen, setThemeMenuOpen] = useState(false)
+    const themeMenuRef = useRef<HTMLDivElement>(null)
+    const topWrapperRef = useRef<HTMLDivElement>(null)
+
+    const applyPreset = (p: { bg: string; surface: string; text: string; primary: string }) => {
+        try {
+            setBg(p.bg)
+            setSurface(p.surface)
+            setText(p.text)
+            setPrimary(p.primary)
+            setTheme('custom')
+        } catch (err) {
+            // ignore if theme API not available
+        }
+        setThemeMenuOpen(false)
     }
 
-    const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setText(e.target.value)
-    }
+    // Close theme menu or top-seller popup when clicking outside
+    useEffect(() => {
+        function onDocClick(e: MouseEvent) {
+            const path = e.composedPath ? e.composedPath() : (e as any).path || []
+            if (themeMenuRef.current && !path.includes(themeMenuRef.current)) {
+                setThemeMenuOpen(false)
+            }
+            if (topWrapperRef.current && !path.includes(topWrapperRef.current)) {
+                setTopOpen(false)
+            }
+        }
+        document.addEventListener('click', onDocClick)
+        return () => document.removeEventListener('click', onDocClick)
+    }, [])
 
-    const handleContrastChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = Number(e.target.value)
-        if (!Number.isNaN(val) && val > 0) setContrast(val)
+    // Show top-rated seller when clicking the star icon. Fetches from API if available.
+    const handleTopClick = async () => {
+        setTopOpen((s) => !s)
+        if (!topSeller) {
+            try {
+                const { data } = await api.get('/api/sellers/top/')
+                // expect { name, rating }
+                setTopSeller(data)
+            } catch (err) {
+                // fallback placeholder if API not available
+                setTopSeller({ name: 'Top Seller', rating: 4.9 })
+            }
+        }
     }
 
     const handleLogout = () => {
@@ -195,7 +237,7 @@ export default function NavBar() {
     };
 
     return (
-        <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 w-full">
+        <nav className="border-b border-gray-200 sticky top-0 z-50 w-full" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
                 <div className="w-full px-4 md:px-6 lg:px-10 flex items-center justify-between h-16 gap-4 nav-gradient">
 
                 {/* Left side: Logo + Hamburger */}
@@ -307,25 +349,96 @@ export default function NavBar() {
                 {/* Search bar */}
                 <form
                     onSubmit={handleSearch}
-                    className="flex-1 flex items-center max-w-xl mx-auto bg-gray-100/60 dark:bg-zinc-800 rounded-full px-3 py-1.5"
+                    className="flex-1 flex items-center max-w-xl mx-auto rounded-full px-3 py-1.5"
+                    style={{ background: 'var(--surface)', color: 'var(--surface-text)' }}
                 >
                     <input
                         type="text"
                         placeholder="Search products..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="flex-1 bg-transparent outline-none text-sm px-2 text-default"
+                        className="flex-1 bg-transparent outline-none text-sm px-2"
+                        style={{ color: 'var(--text)' }}
                     />
                     <button
                         type="submit"
-                        className="text-gray-600 hover:text-blue-600 p-2 rounded-full hover:bg-gray-200 cursor-pointer"
+                        className="p-2 rounded-full cursor-pointer"
+                        style={{ color: 'var(--color-primary-text)', background: 'var(--color-primary)' }}
                         aria-label="Search"
                     >
                         <FaSearch size={16} />
                     </button>
                 </form>
 
-                {/* Right side */}
+                
+
+                    {/* Theme toggle + color picker */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            title="Toggle theme (dark/light)"
+                            onClick={toggle}
+                            className="p-2 rounded-md hover:bg-gray-100 nav-hide-sm"
+                        >
+                            <Sun size={16} />
+                        </button>
+
+                        <div className="relative" ref={themeMenuRef}>
+                            <button title="Theme presets" onClick={() => setThemeMenuOpen((s) => !s)} className="p-2 rounded-md nav-hide-sm" style={{ background: 'transparent', color: 'var(--text)' }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 100 12A6 6 0 0010 2z"/></svg>
+                            </button>
+                            {themeMenuOpen && (
+                                <div className="absolute right-0 mt-2 w-48 border rounded-md shadow-lg p-2 z-50" style={{ background: 'var(--surface)', color: 'var(--text)' }}>
+                                    <div className="text-sm font-medium mb-2">Theme Presets</div>
+                                    <div className="flex flex-col gap-2">
+                                        {themePresets.map((p) => (
+                                            <button key={p.name} onClick={() => applyPreset(p)} className="flex items-center justify-between px-2 py-1 rounded hover:opacity-90" style={{ background: 'transparent', color: 'var(--text)' }}>
+                                                <span>{p.name}</span>
+                                                <span className="w-6 h-6 rounded" style={{ background: p.primary }} />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="relative" ref={topWrapperRef}>
+                            <button title="Top seller" onClick={handleTopClick} className="p-2 rounded-md hover:bg-gray-100 nav-hide-sm">
+                                <Star size={16} />
+                            </button>
+                            {topOpen && (
+                                <div className="absolute right-0 top-full mt-2 w-56 border-card rounded-md shadow-lg p-3 z-50" style={{ background: 'var(--surface)', color: 'var(--text)' }}>
+                                    <div className="text-sm font-medium mb-2">Top Rated Seller</div>
+                                    <div className="text-sm">{topSeller ? `${topSeller.name} — ${topSeller.rating}★` : 'Loading...'}</div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Notifications */}
+                    <div className="relative">
+                        <button onClick={() => setNotificationsOpen((s) => !s)} className="p-2 rounded-md hover:bg-gray-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-default" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z" />
+                                <path d="M9 18a2 2 0 104 0H9z" />
+                            </svg>
+                            {notifications.length > 0 && <span className="notif-badge -mt-2 -ml-2 inline-block">{notifications.length}</span>}
+                        </button>
+                        {notificationsOpen && (
+                            <div className="absolute right-0 mt-2 w-72 bg-surface border-card rounded-md shadow-lg p-2 z-50">
+                                <div className="text-sm font-medium mb-2">Notifications</div>
+                                <div className="space-y-2 max-h-60 overflow-auto">
+                                    {notifications.length === 0 && <div className="text-xs text-muted">No notifications</div>}
+                                    {notifications.map((n, i) => (
+                                        <div key={i} className="p-2 border-b border-card text-sm">
+                                            <div className="font-medium text-default">{n.title || 'Notification'}</div>
+                                            <div className="text-xs text-muted">{n.message || n.summary}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    {/* Right side */}
                 <div className="flex items-center gap-4">
                     {/* Wishlist & Cart visible only to customers. Sellers/Admins see a Home icon linking to their dashboard. */}
                     {user?.role === "customer" ? (
@@ -419,74 +532,9 @@ export default function NavBar() {
                                     </button>
                                 </div>
                             )}
-                        </div>
+                            </div>
                     )}
                 </div>
-
-                    {/* Theme toggle + color picker */}
-                    <div className="flex items-center gap-2">
-                        <button
-                            title="Toggle theme"
-                            onClick={toggle}
-                            className="p-2 rounded-md hover:bg-gray-100 nav-hide-sm"
-                        >
-                            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-                        </button>
-
-                        <input
-                            aria-label="Primary color"
-                            title="Pick primary color"
-                            type="color"
-                            defaultValue={String((window?.getComputedStyle?.(document.documentElement) || {}).getPropertyValue('--color-primary') || '#6366f1').trim()}
-                            onChange={handlePrimaryChange}
-                            className="w-8 h-8 p-0 border-0 bg-transparent"
-                        />
-
-                        <input
-                            aria-label="Text color"
-                            title="Pick text color"
-                            type="color"
-                            defaultValue={text || '#111827'}
-                            onChange={handleTextChange}
-                            className="w-8 h-8 p-0 border-0 bg-transparent"
-                        />
-
-                        <input
-                            aria-label="Contrast"
-                            title="Adjust contrast"
-                            type="range"
-                            min={50}
-                            max={150}
-                            defaultValue={String(contrast || 100)}
-                            onChange={handleContrastChange}
-                            className="w-20 h-2"
-                        />
-                    </div>
-
-                    {/* Notifications */}
-                    <div className="relative">
-                        <button onClick={() => setNotificationsOpen((s) => !s)} className="p-2 rounded-md hover:bg-gray-100">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-default" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z" />
-                                <path d="M9 18a2 2 0 104 0H9z" />
-                            </svg>
-                            {notifications.length > 0 && <span className="notif-badge -mt-2 -ml-2 inline-block">{notifications.length}</span>}
-                        </button>
-                        {notificationsOpen && (
-                            <div className="absolute right-0 mt-2 w-72 bg-surface border-card rounded-md shadow-lg p-2 z-50">
-                                <div className="text-sm font-medium mb-2">Notifications</div>
-                                <div className="space-y-2 max-h-60 overflow-auto">
-                                    {notifications.length === 0 && <div className="text-xs text-muted">No notifications</div>}
-                                    {notifications.map((n, i) => (
-                                        <div key={i} className="p-2 border-b border-card text-sm">
-                                            <div className="font-medium text-default">{n.title || 'Notification'}</div>
-                                            <div className="text-xs text-muted">{n.message || n.summary}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
             </div>
         </nav>
     );
