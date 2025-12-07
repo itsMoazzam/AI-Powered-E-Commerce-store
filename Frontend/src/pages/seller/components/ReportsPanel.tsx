@@ -48,9 +48,9 @@ export default function ReportsPanel({ payments = [], reviews = [], systems = []
             <h3 className="text-lg font-semibold mb-3">Exportable Reports</h3>
             <p className="text-sm text-zinc-500 mb-4">Generate audit logs, OCR verification reports and moderation history. Files will include timestamps and admin action metadata.</p>
             <div className="flex gap-3">
-                <button className="btn-primary" onClick={() => exportToPDF({ payments, reviews, systems, products }, 'audit-report.pdf')}>Export PDF (Audit)</button>
-                <button className="btn-outline" onClick={() => exportToCSV('payments.csv', payments.map(payment => ({ ...payment })))}>Export Payments CSV</button>
-                <button className="btn-outline" onClick={() => exportToCSV('reviews.csv', reviews.map(review => ({ ...review })))}>Export Reviews CSV</button>
+                <button className="btn-primary p-1" onClick={() => exportToPDF({ payments, reviews, systems, products }, 'audit-report.pdf')}>Export PDF (Audit)</button>
+                <button className="btn-outline p-1" onClick={() => exportToCSV('payments.csv', payments.map(payment => ({ ...payment })))}>Export Payments CSV</button>
+                <button className="btn-outline p-1" onClick={() => exportToCSV('reviews.csv', reviews.map(review => ({ ...review })))}>Export Reviews CSV</button>
             </div>
         </div>
     )

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { Role, CustomerForm, SellerForm } from "./Register";
 import { GoogleLogin } from "@react-oauth/google";
+import api from "../../../lib/api";
 
 type GenericForm = CustomerForm | SellerForm;
 
@@ -20,6 +21,10 @@ export default function StepPersonal<T extends GenericForm>({
     setRole,
 }: StepPersonalProps<T>) {
     const [preview, setPreview] = useState<string | null>(null);
+    const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+    const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
+    const usernameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const emailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         // safe File check: ensure File exists in runtime environment
@@ -34,6 +39,56 @@ export default function StepPersonal<T extends GenericForm>({
             setPreview(null);
         }
     }, [form]);
+
+    // Live availability checks (debounced). If backend endpoints are absent
+    // the checks silently no-op (null = unknown).
+    useEffect(() => {
+        const username = (form as any).username || "";
+        if (!username) {
+            setUsernameAvailable(null);
+            return;
+        }
+        if (usernameTimer.current) clearTimeout(usernameTimer.current);
+        usernameTimer.current = setTimeout(async () => {
+            try {
+                const res = await api.get('/api/auth/check-username/', { params: { username } });
+                if (res && res.data) {
+                    if (typeof res.data.available === 'boolean') setUsernameAvailable(res.data.available);
+                    else if (typeof res.data.exists === 'boolean') setUsernameAvailable(!res.data.exists);
+                    else setUsernameAvailable(null);
+                } else {
+                    setUsernameAvailable(null);
+                }
+            } catch (err) {
+                setUsernameAvailable(null);
+            }
+        }, 500);
+        return () => { if (usernameTimer.current) clearTimeout(usernameTimer.current); };
+    }, [form.username]);
+
+    useEffect(() => {
+        const email = (form as any).email || "";
+        if (!email) {
+            setEmailAvailable(null);
+            return;
+        }
+        if (emailTimer.current) clearTimeout(emailTimer.current);
+        emailTimer.current = setTimeout(async () => {
+            try {
+                const res = await api.get('/api/auth/check-email/', { params: { email } });
+                if (res && res.data) {
+                    if (typeof res.data.available === 'boolean') setEmailAvailable(res.data.available);
+                    else if (typeof res.data.exists === 'boolean') setEmailAvailable(!res.data.exists);
+                    else setEmailAvailable(null);
+                } else {
+                    setEmailAvailable(null);
+                }
+            } catch (err) {
+                setEmailAvailable(null);
+            }
+        }, 500);
+        return () => { if (emailTimer.current) clearTimeout(emailTimer.current); };
+    }, [form.email]);
 
     const initials =
         (form.first_name && form.first_name[0]?.toUpperCase()) ||
@@ -85,21 +140,47 @@ export default function StepPersonal<T extends GenericForm>({
                     <option value="customer">Customer</option>
                     <option value="seller">Seller</option>
                 </select>
-                <input
-                    className="border border-gray-300 rounded-xl px-4 py-2 w-full text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    placeholder="Username"
-                    value={(form.username ?? "") as string}
-                    onChange={(e) => onChange("username" as any, e.target.value as any)}
-                    required
-                />
-                <input
-                    className="border border-gray-300 rounded-xl px-4 py-2 w-full text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    placeholder="Email"
-                    type="email"
-                    value={(form.email ?? "") as string}
-                    onChange={(e) => onChange("email" as any, e.target.value as any)}
-                    required
-                />
+                <div className="relative">
+                    <input
+                        className="border border-gray-300 rounded-xl pl-10 px-4 py-2 w-full text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        placeholder="Username"
+                        value={(form.username ?? "") as string}
+                        onChange={(e) => onChange("username" as any, e.target.value as any)}
+                        required
+                    />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                        {usernameAvailable === null ? null : usernameAvailable ? (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                                <path d="M20 6L9 17l-5-5" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                                <path d="M18 6L6 18M6 6l12 12" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        )}
+                    </span>
+                </div>
+                <div className="relative">
+                    <input
+                        className="border border-gray-300 rounded-xl px-4 py-2 w-full text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        placeholder="Email"
+                        type="email"
+                        value={(form.email ?? "") as string}
+                        onChange={(e) => onChange("email" as any, e.target.value as any)}
+                        required
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {emailAvailable === null ? null : emailAvailable ? (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                                <path d="M20 6L9 17l-5-5" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                                <path d="M18 6L6 18M6 6l12 12" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        )}
+                    </span>
+                </div>
 
                 <input
                     className="border border-gray-300 rounded-xl px-4 py-2 w-full text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"

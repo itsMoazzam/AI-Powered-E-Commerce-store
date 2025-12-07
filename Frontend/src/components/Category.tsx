@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
 import { Plus } from "lucide-react";
+import { useTheme } from "../theme/ThemeProvider";
 
 interface Category {
     id: number;
@@ -13,7 +14,8 @@ type Props = {
     selectedId?: number | null;
 };
 
-const CategorySelector: React.FC<Props> = ({ onSelect, selectedId }) => {
+const CategorySelector: React.FC<Props> = ({ onSelect }) => {
+    const { primary } = useTheme();
     const [categories, setCategories] = useState<Category[]>([]);
     const [parentId, setParentId] = useState<string>("");
     const [childId, setChildId] = useState<string>("");
@@ -21,21 +23,21 @@ const CategorySelector: React.FC<Props> = ({ onSelect, selectedId }) => {
     const [newCategory, setNewCategory] = useState("");
     const [level, setLevel] = useState<"parent" | "child" | "stepchild">("parent");
 
-    // ✅ Fetch categories from backend
+    // Fetch categories from backend
     useEffect(() => {
         api.get("/api/products/categories/")
             .then(res => setCategories(res.data))
             .catch(console.error);
     }, []);
 
-    // ✅ Notify parent on selection
+    // Notify parent on selection
     useEffect(() => {
         if (stepChildId) onSelect(Number(stepChildId));
         else if (childId) onSelect(Number(childId));
         else if (parentId) onSelect(Number(parentId));
     }, [parentId, childId, stepChildId]);
 
-    // ✅ Add new category (can be parent, child, or stepchild)
+    // Add new category
     const handleAddCategory = async () => {
         if (!newCategory) return alert("⚠️ Category name required!");
 
@@ -48,7 +50,6 @@ const CategorySelector: React.FC<Props> = ({ onSelect, selectedId }) => {
             parent,
         });
 
-        // update state dynamically
         if (level === "parent") {
             setCategories(prev => [...prev, data]);
         } else if (level === "child" && parentId) {
@@ -86,12 +87,13 @@ const CategorySelector: React.FC<Props> = ({ onSelect, selectedId }) => {
     const stepChildren = selectedChild?.children ?? [];
 
     return (
-        <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700">Category</label>
+        <div className="space-y-4 responsive-container">
+            <label className="block text-sm font-semibold text-default">Category Selection</label>
 
             {/* Parent Dropdown */}
             <select
-                className="input-field"
+                className="input-responsive input-field w-full"
+                style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
                 value={parentId}
                 onChange={e => {
                     setParentId(e.target.value);
@@ -108,7 +110,8 @@ const CategorySelector: React.FC<Props> = ({ onSelect, selectedId }) => {
             {/* Child Dropdown */}
             {children.length > 0 && (
                 <select
-                    className="input-field"
+                    className="input-responsive input-field w-full"
+                    style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
                     value={childId}
                     onChange={e => {
                         setChildId(e.target.value);
@@ -125,7 +128,8 @@ const CategorySelector: React.FC<Props> = ({ onSelect, selectedId }) => {
             {/* Stepchild Dropdown */}
             {stepChildren.length > 0 && (
                 <select
-                    className="input-field"
+                    className="input-responsive input-field w-full"
+                    style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
                     value={stepChildId}
                     onChange={e => setStepChildId(e.target.value)}
                 >
@@ -137,16 +141,18 @@ const CategorySelector: React.FC<Props> = ({ onSelect, selectedId }) => {
             )}
 
             {/* Add New Category */}
-            <div className="flex gap-2 items-center">
+            <div className="responsive-flex flex-col sm:flex-row gap-2 items-start sm:items-center">
                 <input
                     type="text"
-                    className="input-field flex-1"
+                    className="input-responsive border rounded px-2 py-2 text-sm m-1 flex-1 min-w-0"
+                    style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
                     placeholder="New category name"
                     value={newCategory}
                     onChange={e => setNewCategory(e.target.value)}
                 />
                 <select
-                    className="border rounded cursor-pointer px-2 py-1 text-sm text-gray-600"
+                    className="input-responsive border rounded px-2 py-2 text-sm"
+                    style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
                     value={level}
                     onChange={e =>
                         setLevel(e.target.value as "parent" | "child" | "stepchild")
@@ -158,11 +164,19 @@ const CategorySelector: React.FC<Props> = ({ onSelect, selectedId }) => {
                 </select>
                 <button
                     type="button"
-                    className="flex items-center gap-1 bg-indigo-600 text-white px-4 py-[4px] cursor-pointer rounded hover:bg-indigo-700"
+                    className="flex items-center justify-center gap-1 text-white px-4 py-2 cursor-pointer rounded font-medium transition hover:shadow-lg hover:scale-105 w-full sm:w-auto"
+                    style={{ background: primary, color: 'var(--color-primary-text)' }}
                     onClick={handleAddCategory}
                 >
-                    <Plus size={14} /> Add
+                    <Plus size={16} />
+                    <span className="hidden sm:inline">Add</span>
+                    <span className="sm:hidden">+</span>
                 </button>
+            </div>
+
+            {/* Info Box */}
+            <div className="p-3 rounded-lg border border-card text-xs text-muted" style={{ background: 'var(--surface)' }}>
+                <div>ℹ️ Parent categories appear first. Children nest under parents. Grandchildren nest under children.</div>
             </div>
         </div>
     );

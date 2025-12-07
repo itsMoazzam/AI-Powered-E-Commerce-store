@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stripe Demo - Quick Test</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+        .card { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; background: #f9f9f9; }
+        button { background: #6366f1; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        button:hover { background: #4f46e5; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        input { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
+        .output { background: #1e1e1e; color: #0f0; padding: 15px; border-radius: 4px; font-family: monospace; margin: 10px 0; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+        .success { color: #22c55e; }
+        .error { color: #ef4444; }
+        .info { color: #3b82f6; }
+    </style>
+</head>
+<body>
+    <h1>🎵 Stripe Demo - Quick Test</h1>
+    
+    <div class="card">
+        <h2>Server API Testing</h2>
+        <p><strong>Server URL:</strong> <input type="text" id="serverUrl" value="http://localhost:8000" placeholder="http://localhost:8000"></p>
+        
+        <h3>Step 1: Create Order</h3>
+        <button onclick="createOrder()">Create Order</button>
+        <div id="orderOutput" class="output"></div>
+        
+        <h3>Step 2: Get Order Status</h3>
+        <p>Order ID: <input type="text" id="orderId" placeholder="Enter order ID"></p>
+        <button onclick="getOrder()">Get Order</button>
+        <div id="statusOutput" class="output"></div>
+        
+        <h3>Step 3: Create PaymentIntent</h3>
+        <button onclick="createIntent()">Create PaymentIntent</button>
+        <div id="intentOutput" class="output"></div>
+    </div>
+
+    <script>
+        const serverUrl = () => document.getElementById('serverUrl').value
+        
+        const log = (msg, type = 'info') => {
+            const output = document.querySelector('#orderOutput')
+            const div = document.createElement('div')
+            div.className = type
+            div.textContent = msg
+            output.appendChild(div)
+            console.log(`[${type}]`, msg)
+        }
+
+        window.createOrder = async () => {
+            try {
+                log('Creating order...', 'info')
+                const res = await fetch(`${serverUrl()}/api/orders/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount_cents: 2000 })
+                })
+                const data = await res.json()
+                if (!res.ok) throw data
+                
+                document.getElementById('orderId').value = data.id
+                log(`✅ Order created: ${JSON.stringify(data, null, 2)}`, 'success')
+            } catch (err) {
+                log(`❌ Error: ${JSON.stringify(err, null, 2)}`, 'error')
+            }
+        }
+
+        window.getOrder = async () => {
+            try {
+                const id = document.getElementById('orderId').value
+                if (!id) return log('Please enter an order ID', 'error')
+                
+                log('Fetching order...', 'info')
+                const res = await fetch(`${serverUrl()}/api/orders/${id}/`)
+                const data = await res.json()
+                if (!res.ok) throw data
+                
+                const output = document.getElementById('statusOutput')
+                output.innerHTML = `<div class="success">✅ Order status: ${JSON.stringify(data, null, 2)}</div>`
+            } catch (err) {
+                const output = document.getElementById('statusOutput')
+                output.innerHTML = `<div class="error">❌ Error: ${JSON.stringify(err, null, 2)}</div>`
+            }
+        }
+
+        window.createIntent = async () => {
+            try {
+                const id = document.getElementById('orderId').value
+                if (!id) return log('Please create an order first', 'error')
+                
+                log('Creating PaymentIntent...', 'info')
+                const res = await fetch(`${serverUrl()}/api/payments/create-intent/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: parseInt(id) })
+                })
+                const data = await res.json()
+                if (!res.ok) throw data
+                
+                const output = document.getElementById('intentOutput')
+                output.innerHTML = `<div class="success">✅ PaymentIntent created:\n${JSON.stringify(data, null, 2)}</div>`
+            } catch (err) {
+                const output = document.getElementById('intentOutput')
+                output.innerHTML = `<div class="error">❌ Error: ${JSON.stringify(err, null, 2)}</div>`
+            }
+        }
+
+        // Auto-test on load (optional)
+        window.onload = () => {
+            log('✓ Test page loaded. Click buttons to test server API.', 'info')
+        }
+    </script>
+</body>
+</html>

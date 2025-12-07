@@ -1,132 +1,84 @@
-// import React from "react"
 import { Outlet } from "react-router-dom"
 import { motion } from "framer-motion"
 import NavBar from "../Home/NavBar"
-
-// import {
-//     ShoppingCart,
-//     UserCircle2,
-//     LayoutDashboard,
-//     Package,
-//     Store,
-// } from "lucide-react"
 import { Footer, FooterCopyright, FooterIcon, FooterLink, FooterLinkGroup, FooterTitle } from "flowbite-react";
 import { BsDribbble, BsFacebook, BsGithub, BsInstagram, BsTwitter } from "react-icons/bs";
-
-
-// import { useSelector, useDispatch } from "react-redux"
-// import type { RootState, AppDispatch } from "../../store"
-// import { logout } from "../../store/auth"   
-
-// const NavLink = ({ to, children }: { to: string; children: React.ReactNode }) => {
-//     const { pathname } = useLocation()
-//     const active = pathname === to
-//     return (
-//         <Link
-//             to={to}
-//             className={`px-3 py-2 rounded-xl ${active
-//                 ? "bg-zinc-900 text-white"
-//                 : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
-//                 }`}
-//         >
-//             {children}
-//         </Link>
-//     )
-// }
+import { useTheme } from "../../theme/ThemeProvider";
 
 export default function RootLayout() {
-    // const dispatch = useDispatch<AppDispatch>()
-
-    // ✅ get auth state from Redux
-    // const { role } = useSelector((state: RootState) => state.auth)
-
-    // // ✅ logout handler
-    // const handleLogout = () => {
-    //     dispatch(logout())
-    //     location.href = "/login" // optional redirect
-    // }
+    const { theme } = useTheme();
 
     return (
-        <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-            {/* <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-zinc-900/60 border-b border-zinc-200/60 dark:border-zinc-800">
-                <div className="container flex items-center justify-between py-3 gap-4">
-                    <Link to="/" className="flex items-center gap-2 font-semibold">
-                        <Package className="w-5 h-5" /> IntelligentStore
-                    </Link>
-                    <nav className="flex items-center gap-2">
-                        <NavLink to="/">Home</NavLink>
-                        <NavLink to="/cart">
-                            <ShoppingCart className="w-4 h-4" />
-                        </NavLink>
-                        {role === "seller" && (
-                            <NavLink to="/seller">
-                                <Store className="w-4 h-4" />
-                            </NavLink>
-                        )}
-                        {role === "admin" && (
-                            <NavLink to="/admin">
-                                <LayoutDashboard className="w-4 h-4" />
-                            </NavLink>
-                        )}
-                        <button onClick={handleLogout} className="btn-outline">
-                            <UserCircle2 className="w-4 h-4" /> Logout
-                        </button>
-                    </nav>
-                </div>
-            </header> */}
+        <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
+            {/* Navigation */}
             <NavBar />
+
+            {/* Main Content */}
             <motion.main
+                className="flex-1 w-full"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
             >
-                <div className="py-6">
+                <div className="py-6 sm:py-8 lg:py-12">
                     <Outlet />
                 </div>
             </motion.main>
 
-            <Footer bgDark>
-                <div className="w-full">
-                    <div className="grid w-full grid-cols-2 gap-8 px-6 py-8 md:grid-cols-4">
+            {/* Footer */}
+            <Footer bgDark className="border-t border-card transition-colors duration-300" style={{ background: 'var(--surface)', color: 'var(--text)' }}>
+                <div className="w-full px-4 sm:px-6 lg:px-8">
+                    <div className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6 lg:gap-8 px-0 sm:px-6 py-8">
                         <div>
                             <FooterTitle title="Company" />
                             <FooterLinkGroup col>
-                                <FooterLink href="#">About</FooterLink>
-                                <FooterLink href="#">Careers</FooterLink>
-                                <FooterLink href="#">Brand Center</FooterLink>
-                                <FooterLink href="#">Blog</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">About</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Careers</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Brand Center</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Blog</FooterLink>
                             </FooterLinkGroup>
                         </div>
                         <div>
-                            <FooterTitle title="help center" />
+                            <FooterTitle title="Help center" />
                             <FooterLinkGroup col>
-                                <FooterLink href="#">Discord Server</FooterLink>
-                                <FooterLink href="#">Twitter</FooterLink>
-                                <FooterLink href="#">Facebook</FooterLink>
-                                <FooterLink href="#">Contact Us</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Discord</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Twitter</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Facebook</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Contact Us</FooterLink>
                             </FooterLinkGroup>
                         </div>
                         <div>
-                            <FooterTitle title="legal" />
+                            <FooterTitle title="Legal" />
                             <FooterLinkGroup col>
-                                <FooterLink href="#">Privacy Policy</FooterLink>
-                                <FooterLink href="#">Licensing</FooterLink>
-                                <FooterLink href="#">Terms &amp; Conditions</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Privacy Policy</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Licensing</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Terms & Conditions</FooterLink>
                             </FooterLinkGroup>
                         </div>
-                        <div>
-                            <FooterTitle title="download" />
+                        <div className="hidden md:block">
+                            <FooterTitle title="Download" />
                             <FooterLinkGroup col>
-                                <FooterLink href="#">iOS</FooterLink>
-                                <FooterLink href="#">Android</FooterLink>
-                                <FooterLink href="#">Windows</FooterLink>
-                                <FooterLink href="#">MacOS</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">iOS</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Android</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Windows</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">MacOS</FooterLink>
+                            </FooterLinkGroup>
+                        </div>
+                        <div className="hidden md:block">
+                            <FooterTitle title="Follow us" />
+                            <FooterLinkGroup col>
+                                <FooterLink href="#" className="hover:text-primary transition">GitHub</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Discord</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Twitter</FooterLink>
+                                <FooterLink href="#" className="hover:text-primary transition">Facebook</FooterLink>
                             </FooterLinkGroup>
                         </div>
                     </div>
-                    <div className="w-full bg-gray-700 px-4 py-6 sm:flex sm:items-center sm:justify-between ">
-                        <FooterCopyright href="#" by="AI Powered Store" year={new Date().getFullYear()} />
-                        <div className="mt-4 flex space-x-6 sm:mt-0 sm:justify-center">
+
+                    {/* Footer Bottom */}
+                    <div className="w-full border-t border-card px-0 sm:px-6 py-6 sm:py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <FooterCopyright by="AI-Powered E-Commerce™" year={2025} />
+                        <div className="flex gap-4 sm:gap-6">
                             <FooterIcon href="#" icon={BsFacebook} />
                             <FooterIcon href="#" icon={BsInstagram} />
                             <FooterIcon href="#" icon={BsTwitter} />
@@ -136,6 +88,6 @@ export default function RootLayout() {
                     </div>
                 </div>
             </Footer>
-        </div >
+        </div>
     )
 }
