@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import type { ChangeEvent } from "react";
 import type { CustomerForm } from "./Register";
 
@@ -11,10 +11,53 @@ type Props = {
 
 const StepCustomer: React.FC<Props> = ({ form, onChange }) => {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const [feet, setFeet] = useState<string>("")
+    const [inches, setInches] = useState<string>("")
 
     function handleFile(e: ChangeEvent<HTMLInputElement>) {
         const f = e.target.files?.[0] ?? null;
         onChange("profile_photo", f);
+    }
+
+    // sync local feet/inches when parent form.height (cm) changes
+    useEffect(() => {
+        const h = form.height
+        if (h === null || h === undefined || h === "") {
+            setFeet("")
+            setInches("")
+            return
+        }
+
+        const cm = Number(h)
+        if (!isFinite(cm) || cm <= 0) {
+            setFeet("")
+            setInches("")
+            return
+        }
+
+        const totalInches = cm / 2.54
+        let f = Math.floor(totalInches / 12)
+        let i = Math.round(totalInches - f * 12)
+        if (i === 12) {
+            f += 1
+            i = 0
+        }
+        setFeet(String(f))
+        setInches(String(i))
+    }, [form.height])
+
+    const updateHeightFromParts = (fStr: string, iStr: string) => {
+        const f = fStr === "" ? NaN : Number(fStr)
+        const i = iStr === "" ? NaN : Number(iStr)
+        if (!isFinite(f) && !isFinite(i)) {
+            onChange("height", "")
+            return
+        }
+        const feetVal = isFinite(f) ? f : 0
+        const inchesVal = isFinite(i) ? i : 0
+        const totalInches = feetVal * 12 + inchesVal
+        const cm = totalInches * 2.54
+        onChange("height", Number(cm.toFixed(2)))
     }
 
     return (
@@ -29,13 +72,40 @@ const StepCustomer: React.FC<Props> = ({ form, onChange }) => {
                     value={form.age ?? ""}
                     onChange={(e) => onChange("age", e.target.value ? Number(e.target.value) : "")}
                 />
-                <input
-                    className="input-field"
-                    placeholder="Height (cm)"
-                    type="number"
-                    value={form.height ?? ""}
-                    onChange={(e) => onChange("height", e.target.value ? Number(e.target.value) : "")}
-                />
+                <div className="flex gap-2 items-center">
+                    <label className="sr-only">Height feet</label>
+                    <input
+                        className="input-field w-24"
+                        placeholder="ft"
+                        type="number"
+                        min={0}
+                        value={feet}
+                        onChange={(e) => {
+                            const v = e.target.value
+                            // allow empty or integer values
+                            if (v === "" || /^\d*$/.test(v)) {
+                                setFeet(v)
+                                updateHeightFromParts(v, inches)
+                            }
+                        }}
+                    />
+                    <label className="sr-only">Height inches</label>
+                    <input
+                        className="input-field w-24"
+                        placeholder="in"
+                        type="number"
+                        min={0}
+                        max={11}
+                        value={inches}
+                        onChange={(e) => {
+                            const v = e.target.value
+                            if (v === "" || /^\d*$/.test(v)) {
+                                setInches(v)
+                                updateHeightFromParts(feet, v)
+                            }
+                        }}
+                    />
+                </div>
             </div>
 
             <input

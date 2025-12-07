@@ -9,12 +9,12 @@ import SystemPanel from "./components/SystemPanel"
 import ReportsPanel from "./components/ReportsPanel"
 import CSVUpload from "./components/CSVUpload"
 import OrdersPanel from "./components/OrdersPanel"
+import AdvertisementPanel from "./components/AdvertisementPanel"
 import api from "../../lib/api"
-import { useTheme } from "../../theme/ThemeProvider"
 
 type View = "products" | "add" | "edit" | "payments" | "reviews" | "system" | "reports" | "bulk"
-// include orders view
-type ExtendedView = View | 'orders'
+// include orders and advertisements views
+type ExtendedView = View | 'orders' | 'advertisements'
 
 type Product = {
     id: number | string
@@ -29,7 +29,6 @@ export default function SellerDashboard() {
     const [products, setProducts] = useState<Product[]>([])
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
     const [sellerName, setSellerName] = useState<string | null>(null)
-    const { theme } = useTheme()
     // cast helpers to avoid cross-file prop type mismatches in this isolated edit
     const ProductListAny = ProductList as unknown as any
 
@@ -90,8 +89,8 @@ export default function SellerDashboard() {
                             <h1 className="text-2xl font-bold text-default">{sellerName ? `Welcome, ${sellerName}` : 'Manage products, upload 3D models, bulk import CSV and monitor system status'}</h1>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button onClick={() => setViewState("bulk")} className="btn-outline">Bulk Upload</button>
-                            <button onClick={() => setViewState("add")} className="btn-primary">Add Product</button>
+                            <button onClick={() => setViewState("bulk")} className="btn-outline p-1">Bulk Upload</button>
+                            <button onClick={() => setViewState("add")} className="btn-primary p-1">Add Product</button>
                         </div>
                     </header>
 
@@ -122,7 +121,8 @@ export default function SellerDashboard() {
                     {view === "bulk" && <CSVUpload onImported={(items: any) => setProducts((s) => [...(items as Product[]), ...s])} />}
 
                     {view === "payments" && <PaymentsPanel payments={[]} onAction={(id, action) => { console.log('payments action', id, action) }} />}
-                                        {view === "orders" && <OrdersPanel />}
+                    {view === "orders" && <OrdersPanel />}
+                    {view === "advertisements" && <AdvertisementPanel />}
                     {view === "reviews" && <ReviewsPanel onModerate={(id, action, reason) => { console.log('moderate', id, action, reason) }} />}
                     {view === "system" && <SystemPanel />}
                     {view === "reports" && <ReportsPanel payments={[]} reviews={[]} products={products as any} systems={[]} />}

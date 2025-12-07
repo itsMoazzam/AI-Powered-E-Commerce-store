@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import api from "../lib/api"
 import { Loader2, CreditCard, ShoppingBag } from "lucide-react"
 import ReceiptUpload from "../components/ReceiptUpload"
@@ -27,11 +27,9 @@ export default function Checkout() {
     const [paymentOptions, setPaymentOptions] = useState<{ id: string, label: string }[]>([])
     const [selectedPayment, setSelectedPayment] = useState<string | null>(null)
 
-    // Dummy cart items
-    const items = [
-        { id: 1, name: "Men’s T-Shirt", qty: 2, price: 100 },
-        { id: 2, name: "Wireless Headphones", qty: 1, price: 150 },
-    ]
+    // Items: either from query params (single product checkout) or pulled from cart
+    const [items, setItems] = useState<{ id: number | string; name: string; qty: number; price: number }[]>([])
+    // If no `items` are loaded we fall back to an empty list
     const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0)
     const shippingFee = deliveryMethod === "express" ? 15 : 0
     const tax = subtotal * 0.1
@@ -50,42 +48,44 @@ export default function Checkout() {
 
         setLoading(true)
         try {
-                const order = {
-                    shipping_address: address,
-                    items,
-                    delivery_method: deliveryMethod,
-                    payment_method: selectedPayment || 'online',
-                    payment,
-                    coupon: coupon || null,
-                    total,
-                }
+            const order = {
+                shipping_address: address,
+                items,
+                delivery_method: deliveryMethod,
+                payment_method: selectedPayment || 'online',
+                payment,
+                coupon: coupon || null,
+                total,
+            }
 
-                const { data } = await api.post("/api/orders/", order)
-                console.log("Order placed:", data)
+            const { data } = await api.post("/api/orders/", order)
+            console.log("Order placed:", data)
 
-                // attempt to log order details server-side (if endpoint exists)
-                try {
-                    await api.post('/api/orders/log/', { order_id: data.id || null, payload: order })
-                } catch (err) {
-                    // non-fatal — logging endpoint may not exist
-                    console.debug('order log endpoint missing or failed', err)
-                }
+            // attempt to log order details server-side (if endpoint exists)
+            try {
+                await api.post('/api/orders/log/', { order_id: data.id || null, payload: order })
+            } catch (err) {
+                // non-fatal — logging endpoint may not exist
+                console.debug('order log endpoint missing or failed', err)
+            }
 
-                // log locally
-                try {
-                    const raw = localStorage.getItem('orderHistory')
-                    const arr = raw ? JSON.parse(raw) : []
-                    arr.unshift({ id: data.id || Date.now(), total: total, created_at: new Date().toISOString(), items: order.items })
-                    localStorage.setItem('orderHistory', JSON.stringify(arr))
-                } catch {}
+            // log locally
+            try {
+                const raw = localStorage.getItem('orderHistory')
+                const arr = raw ? JSON.parse(raw) : []
+                arr.unshift({ id: data.id || Date.now(), total: total, created_at: new Date().toISOString(), items: order.items })
+                localStorage.setItem('orderHistory', JSON.stringify(arr))
+            } catch { }
 
-                alert("✅ Order placed successfully!")
-                // open printable invoice
+            alert("✅ Order placed successfully!")
+            // open printable invoice
+            if (typeof printInvoice === 'function') {
                 try { printInvoice({ id: data.id || 'N/A', shipping_address: address, items, total }) } catch (err) { console.warn(err) }
+            }
 
-                setStep(1)
-                setAddress({})
-                setPayment({ cardNumber: "", expiry: "", cvv: "" })
+            setStep(1)
+            setAddress({})
+            setPayment({ cardNumber: "", expiry: "", cvv: "" })
         } catch (err) {
             console.error("Failed to place order", err)
             alert("❌ Something went wrong.")
@@ -130,6 +130,40 @@ export default function Checkout() {
     // load payment options on mount
     useState(() => { fetchPaymentOptions() })
 
+    // If a product id is provided in query params, preload that product into `items`
+    useEffect(() => {
+        try {
+            const params = new URLSearchParams(window.location.search)
+            const productParam = params.get('product')
+            const qtyParam = params.get('qty')
+            if (productParam) {
+                (async () => {
+                    try {
+                        const { data } = await api.get(`/api/products/${productParam}/`)
+                        const price = Number(data.price) || 0
+                        const qty = qtyParam ? Number(qtyParam) : 1
+                        setItems([{ id: data.id || productParam, name: data.title || data.name || 'Product', qty, price }])
+                    } catch (err) {
+                        console.error('Failed to preload product for checkout', err)
+                    }
+                })()
+            } else {
+                // no product query — optionally load cart items from backend for checkout
+                ; (async () => {
+                    try {
+                        const { data } = await api.get('/api/cart/')
+                        const loaded = (data.items || []).map((it: any) => ({ id: it.id, name: it.product?.name || it.title || it.product, qty: it.quantity || it.qty || 1, price: it.price || it.unit_price || 0 }))
+                        setItems(loaded)
+                    } catch (err) {
+                        // ignore — user may proceed with manual items
+                    }
+                })()
+            }
+        } catch (e) {
+            // ignore
+        }
+    }, [])
+
     return (
         <div className="container mx-auto px-4 py-10 grid md:grid-cols-3 gap-8">
             {/* LEFT SIDE: CHECKOUT STEPS */}
@@ -165,7 +199,7 @@ export default function Checkout() {
 
                 {/* coupon input (small) */}
                 {step === 1 && (
-                        <div className="mt-3">
+                    <div className="mt-3">
                         <label className="text-sm font-medium">Have a coupon?</label>
                         <div className="flex gap-2 mt-2">
                             <input value={coupon} onChange={(e) => setCoupon(e.target.value)} className="input-field" placeholder="Coupon code" />
@@ -261,7 +295,7 @@ export default function Checkout() {
                             {/* allow receipt upload for offline payment verification */}
                             {selectedPayment && selectedPayment !== 'online' && (
                                 <div className="mt-2">
-                                    <ReceiptUpload onVerified={(ok, info) => { if (ok) alert('Receipt processed') }} />
+                                    <ReceiptUpload onVerified={(ok) => { if (ok) alert('Receipt processed') }} />
                                 </div>
                             )}
                         </div>

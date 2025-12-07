@@ -13,6 +13,12 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [forgotOpen, setForgotOpen] = useState(false)
+    const [fpEmail, setFpEmail] = useState("")
+    const [fpPhone, setFpPhone] = useState("")
+    const [fpLoading, setFpLoading] = useState(false)
+    const [fpMessage, setFpMessage] = useState<string | null>(null)
+    const [fpError, setFpError] = useState<string | null>(null)
 
 
     async function submit(e: React.FormEvent) {
@@ -103,6 +109,10 @@ export default function Login() {
                         </div>
                     </div>
 
+                    <div className="text-right mt-1">
+                        <button type="button" onClick={() => { setForgotOpen(true); setFpMessage(null); setFpError(null) }} className="text-sm text-blue-300 hover:underline">Forgot password?</button>
+                    </div>
+
                     {/* Error Message */}
                     {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 
@@ -118,6 +128,82 @@ export default function Login() {
                         {loading ? "Signing in..." : "Sign In"}
                     </button>
                 </form>
+
+                {/* Forgot password modal */}
+                {forgotOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black/50" onClick={() => setForgotOpen(false)} />
+                        <div className="relative z-10 w-full max-w-md bg-gray-800/90 border border-gray-700 rounded-2xl p-6 text-white">
+                            <div className="flex items-start justify-between mb-3">
+                                <h3 className="text-lg font-semibold">Reset Password</h3>
+                                <button onClick={() => setForgotOpen(false)} className="text-gray-400 hover:text-white"><X size={18} /></button>
+                            </div>
+
+                            <p className="text-sm text-gray-300 mb-4">Enter your email and/or mobile number. We'll send a password reset link to your email and an SMS with a reset link/code to your phone if available.</p>
+
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-xs text-gray-300 mb-1">Email</label>
+                                    <input value={fpEmail} onChange={(e) => setFpEmail(e.target.value)} placeholder="you@example.com" className="w-full px-3 py-2 rounded bg-gray-700/60 border border-gray-600 text-white" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-300 mb-1">Mobile (optional)</label>
+                                    <input value={fpPhone} onChange={(e) => setFpPhone(e.target.value)} placeholder="+1234567890" className="w-full px-3 py-2 rounded bg-gray-700/60 border border-gray-600 text-white" />
+                                </div>
+
+                                {fpMessage && <div className="text-sm text-green-400">{fpMessage}</div>}
+                                {fpError && <div className="text-sm text-red-400">{fpError}</div>}
+
+                                <div className="flex items-center gap-2 mt-2">
+                                    <button
+                                        onClick={async () => {
+                                            setFpLoading(true)
+                                            setFpMessage(null)
+                                            setFpError(null)
+                                            try {
+                                                let anySent = false
+                                                if (fpEmail && fpEmail.trim()) {
+                                                    try {
+                                                        await api.post('/api/auth/password-reset/', { email: fpEmail.trim() })
+                                                        anySent = true
+                                                    } catch (e) {
+                                                        // capture but continue to try sms
+                                                        console.warn('email reset failed', e)
+                                                    }
+                                                }
+
+                                                if (fpPhone && fpPhone.trim()) {
+                                                    try {
+                                                        await api.post('/api/auth/password-reset-sms/', { phone: fpPhone.trim() })
+                                                        anySent = true
+                                                    } catch (e) {
+                                                        console.warn('sms reset failed', e)
+                                                    }
+                                                }
+
+                                                if (!anySent) {
+                                                    setFpError('Could not send reset. Please check your details or try again later.')
+                                                } else {
+                                                    setFpMessage('If an account exists we sent reset instructions. Check your email and SMS.')
+                                                }
+                                            } catch (err) {
+                                                console.error('Forgot password error', err)
+                                                setFpError('Unexpected error. Please try again later.')
+                                            } finally {
+                                                setFpLoading(false)
+                                            }
+                                        }}
+                                        disabled={fpLoading}
+                                        className={`px-4 py-2 rounded font-medium ${fpLoading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                    >
+                                        {fpLoading ? 'Sending...' : 'Send Reset'}
+                                    </button>
+                                    <button onClick={() => setForgotOpen(false)} className="px-3 py-2 rounded border border-gray-600">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Continue with Google */}
                 <div className="mt-4 flex items-center justify-center">

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import api from "../lib/api";
 import ThreeDot from "../components/threeDot";
+import { useTheme } from "../theme/ThemeProvider";
+import { Edit2, Check, X } from "lucide-react";
 
 type UserProfile = {
     username: string;
@@ -20,6 +22,7 @@ type UserProfile = {
 };
 
 export default function Profile(): React.ReactElement {
+    const { primary } = useTheme();
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
@@ -137,43 +140,46 @@ export default function Profile(): React.ReactElement {
     const isAdmin = profile.role === "admin";
 
     return (
-        <div className="max-w-4xl mx-auto mt-10 bg-white text-gray-700 rounded-2xl shadow-lg p-8 border border-gray-100">
-            <div className="flex items-start justify-between mb-6">
-                <h2 className="text-3xl font-bold text-gray-800">{isAdmin ? "Admin Dashboard" : "My Profile"}</h2>
+        <div className="max-w-5xl mx-auto mt-4 sm:mt-8 lg:mt-12 p-4 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl shadow-lg border border-card" style={{ background: 'var(--surface)' }}>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <h2 className="text-2xl sm:text-3xl font-bold text-default">{isAdmin ? "👤 Admin Dashboard" : "👤 My Profile"}</h2>
                 {!isEditing ? (
                     <button
                         onClick={handleStartEdit}
-                        className="btn-primary bg-indigo-600 text-white px-4 py-2 rounded-lg cursor-pointer"
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-white font-medium transition hover:opacity-90 w-full sm:w-auto"
+                        style={{ background: primary }}
                     >
-                        Edit Profile
+                        <Edit2 size={18} /> Edit Profile
                     </button>
                 ) : (
-                    <div className="space-x-2">
+                    <div className="flex gap-2 w-full sm:w-auto">
                         <button
                             onClick={handleSave}
                             disabled={saving}
-                            className="btn-primary bg-green-600 text-white px-4 py-2 rounded-lg cursor-pointer"
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-white font-medium transition hover:opacity-90 disabled:opacity-60 bg-green-600"
                         >
-                            {saving ? "Saving..." : "Save"}
+                            <Check size={18} /> {saving ? "Saving..." : "Save"}
                         </button>
-                        <button onClick={handleCancel} className="btn-outline px-4 py-2 rounded-lg cursor-pointer">
-                            Cancel
+                        <button onClick={handleCancel} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition border" style={{ borderColor: 'var(--card-border)', color: 'var(--text)' }}>
+                            <X size={18} /> Cancel
                         </button>
                     </div>
                 )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Left: Photo & Seller Info */}
                 <div className="md:col-span-1 flex flex-col items-center">
-                    <div className="w-36 h-36 mb-4">
+                    <div className="w-32 h-32 sm:w-36 sm:h-36 mb-4">
                         {photoPreview ? (
                             <img
                                 src={photoPreview}
                                 alt="Profile"
-                                className="w-36 h-36 rounded-full object-cover border border-zinc-300 shadow-sm"
+                                className="w-full h-full rounded-full object-cover border-2 shadow-md"
+                                style={{ borderColor: primary }}
                             />
                         ) : (
-                            <div className="w-36 h-36 rounded-full bg-zinc-100 flex items-center justify-center text-gray-500 shadow-inner">
+                            <div className="w-full h-full rounded-full flex items-center justify-center text-sm text-muted font-medium" style={{ background: 'var(--bg)', borderColor: 'var(--card-border)', borderWidth: '2px' }}>
                                 No Photo
                             </div>
                         )}
@@ -181,170 +187,215 @@ export default function Profile(): React.ReactElement {
 
                     {isEditing && (
                         <div className="w-full text-center">
+                            <label className="block text-xs sm:text-sm text-muted mb-2">Upload Photo</label>
                             <input
                                 ref={photoRef}
                                 type="file"
                                 accept="image/*"
-                                onChange={(e) => {
-                                    handlePhotoPicked(e);
-                                }}
-                                className="text-sm mb-2"
+                                onChange={handlePhotoPicked}
+                                className="text-xs block w-full"
                             />
                         </div>
                     )}
 
                     {isSeller && (
-                        <div className="w-full text-sm text-gray-600 mt-4">
-                            <p className="font-semibold">Seller Info</p>
-                            <p className="text-xs">Store: {profile.store_name ?? "-"}</p>
-                            <p className="text-xs">Business Address: {profile.business_address ?? "-"}</p>
-                            <p className="text-xs">License: {licenseName ?? (profile.business_license ? "Uploaded" : "-")}</p>
+                        <div className="w-full text-sm text-default mt-6 pt-6 border-t border-card">
+                            <p className="font-semibold mb-3">🏪 Seller Information</p>
+                            <div className="space-y-2 text-xs text-muted">
+                                <div>
+                                    <span className="font-medium">Store:</span> {profile.store_name ?? "-"}
+                                </div>
+                                <div>
+                                    <span className="font-medium">Business Address:</span> {profile.business_address ? profile.business_address.substring(0, 50) + "..." : "-"}
+                                </div>
+                                <div>
+                                    <span className="font-medium">License:</span> {licenseName ?? (profile.business_license ? "✅ Uploaded" : "-")}
+                                </div>
+                            </div>
                             {isEditing && (
-                                <div className="mt-2">
-                                    <input ref={licenseRef} type="file" onChange={handleLicensePicked} />
+                                <div className="mt-3 pt-3 border-t border-card">
+                                    <label className="block text-xs text-muted mb-2">Update License</label>
+                                    <input ref={licenseRef} type="file" onChange={handleLicensePicked} className="text-xs" />
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
 
+                {/* Right: Form Fields */}
                 <div className="md:col-span-2">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Username */}
                         <div>
-                            <label className="block text-sm text-gray-600">Username</label>
-                            <div className="mt-1 text-gray-800 font-medium">{profile.username}</div>
+                            <label className="block text-xs sm:text-sm font-medium text-muted mb-2">Username</label>
+                            <div className="text-default font-medium text-sm sm:text-base">{profile.username}</div>
                         </div>
 
+                        {/* Email */}
                         <div>
-                            <label className="block text-sm text-gray-600">Email</label>
-                            <div className="mt-1 text-gray-800 font-medium">{profile.email}</div>
+                            <label className="block text-xs sm:text-sm font-medium text-muted mb-2">Email</label>
+                            <div className="text-default font-medium text-sm sm:text-base">{profile.email}</div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm text-gray-600">First name</label>
-                            {isEditing ? (
-                                <input
-                                    value={String(draft.first_name ?? "")}
-                                    onChange={(e) => handleChange("first_name", e.target.value)}
-                                    className="mt-1 input w-full"
-                                />
-                            ) : (
-                                <div className="mt-1">{profile.first_name}</div>
-                            )}
-                        </div>
+                        {/* First Name */}
+                        {(isEditing || (profile.first_name && profile.first_name.length > 0)) && (
+                            <div>
+                                <label className="block text-xs sm:text-sm font-medium text-muted mb-2">First Name</label>
+                                {isEditing ? (
+                                    <input
+                                        value={String(draft.first_name ?? "")}
+                                        onChange={(e) => handleChange("first_name", e.target.value)}
+                                        className="input-responsive w-full text-sm"
+                                        style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
+                                    />
+                                ) : (
+                                    <div className="text-default text-sm sm:text-base">{profile.first_name}</div>
+                                )}
+                            </div>
+                        )}
 
-                        <div>
-                            <label className="block text-sm text-gray-600">Last name</label>
-                            {isEditing ? (
-                                <input
-                                    value={String(draft.last_name ?? "")}
-                                    onChange={(e) => handleChange("last_name", e.target.value)}
-                                    className="mt-1 input w-full"
-                                />
-                            ) : (
-                                <div className="mt-1">{profile.last_name}</div>
-                            )}
-                        </div>
+                        {/* Last Name */}
+                        {(isEditing || (profile.last_name && profile.last_name.length > 0)) && (
+                            <div>
+                                <label className="block text-xs sm:text-sm font-medium text-muted mb-2">Last Name</label>
+                                {isEditing ? (
+                                    <input
+                                        value={String(draft.last_name ?? "")}
+                                        onChange={(e) => handleChange("last_name", e.target.value)}
+                                        className="input-responsive w-full text-sm"
+                                        style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
+                                    />
+                                ) : (
+                                    <div className="text-default text-sm sm:text-base">{profile.last_name}</div>
+                                )}
+                            </div>
+                        )}
 
-                        <div>
-                            <label className="block text-sm text-gray-600">Mobile</label>
-                            {isEditing ? (
-                                <input
-                                    value={String(draft.mobile ?? "")}
-                                    onChange={(e) => handleChange("mobile", e.target.value ?? null)}
-                                    className="mt-1 input w-full"
-                                />
-                            ) : (
-                                <div className="mt-1">{profile.mobile ?? "-"}</div>
-                            )}
-                        </div>
+                        {/* Mobile */}
+                        {(isEditing || (profile.mobile && profile.mobile.length > 0)) && (
+                            <div>
+                                <label className="block text-xs sm:text-sm font-medium text-muted mb-2">Mobile</label>
+                                {isEditing ? (
+                                    <input
+                                        value={String(draft.mobile ?? "")}
+                                        onChange={(e) => handleChange("mobile", e.target.value ?? null)}
+                                        className="input-responsive w-full text-sm"
+                                        style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
+                                    />
+                                ) : (
+                                    <div className="text-default text-sm sm:text-base">{profile.mobile}</div>
+                                )}
+                            </div>
+                        )}
 
-                        <div>
-                            <label className="block text-sm text-gray-600">Website</label>
-                            {isEditing ? (
-                                <input
-                                    value={String(draft.website ?? "")}
-                                    onChange={(e) => handleChange("website", e.target.value ?? null)}
-                                    className="mt-1 input w-full"
-                                />
-                            ) : (
-                                <div className="mt-1">{profile.website ?? "-"}</div>
-                            )}
-                        </div>
+                        {/* Website */}
+                        {(isEditing || (profile.website && profile.website.length > 0)) && (
+                            <div>
+                                <label className="block text-xs sm:text-sm font-medium text-muted mb-2">Website</label>
+                                {isEditing ? (
+                                    <input
+                                        value={String(draft.website ?? "")}
+                                        onChange={(e) => handleChange("website", e.target.value ?? null)}
+                                        className="input-responsive w-full text-sm"
+                                        style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
+                                    />
+                                ) : (
+                                    <div className="text-default text-sm sm:text-base">{profile.website}</div>
+                                )}
+                            </div>
+                        )}
 
-                        <div>
-                            <label className="block text-sm text-gray-600">Address</label>
-                            {isEditing ? (
-                                <input
-                                    value={String(draft.address ?? "")}
-                                    onChange={(e) => handleChange("address", e.target.value ?? null)}
-                                    className="mt-1 input w-full"
-                                />
-                            ) : (
-                                <div className="mt-1">{profile.address ?? "-"}</div>
-                            )}
-                        </div>
+                        {/* Address */}
+                        {(isEditing || (profile.address && profile.address.length > 0)) && (
+                            <div>
+                                <label className="block text-xs sm:text-sm font-medium text-muted mb-2">Address</label>
+                                {isEditing ? (
+                                    <input
+                                        value={String(draft.address ?? "")}
+                                        onChange={(e) => handleChange("address", e.target.value ?? null)}
+                                        className="input-responsive w-full text-sm"
+                                        style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
+                                    />
+                                ) : (
+                                    <div className="text-default text-sm sm:text-base">{profile.address}</div>
+                                )}
+                            </div>
+                        )}
 
+                        {/* Customer-only fields */}
                         {isCustomer && (
                             <>
-                                <div>
-                                    <label className="block text-sm text-gray-600">Age</label>
-                                    {isEditing ? (
-                                        <input
-                                            type="number"
-                                            value={draft.age ?? ""}
-                                            onChange={(e) => handleChange("age", e.target.value ? Number(e.target.value) : null)}
-                                            className="mt-1 input w-full"
-                                        />
-                                    ) : (
-                                        <div className="mt-1">{profile.age ?? "-"}</div>
-                                    )}
-                                </div>
+                                {(isEditing || (profile.age !== undefined && profile.age !== null)) && (
+                                    <div>
+                                        <label className="block text-xs sm:text-sm font-medium text-muted mb-2">Age</label>
+                                        {isEditing ? (
+                                            <input
+                                                type="number"
+                                                value={draft.age ?? ""}
+                                                onChange={(e) => handleChange("age", e.target.value ? Number(e.target.value) : null)}
+                                                className="input-responsive w-full text-sm"
+                                                style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
+                                            />
+                                        ) : (
+                                            <div className="text-default text-sm sm:text-base">{profile.age}</div>
+                                        )}
+                                    </div>
+                                )}
 
-                                <div>
-                                    <label className="block text-sm text-gray-600">Height (cm)</label>
-                                    {isEditing ? (
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={draft.height ?? ""}
-                                            onChange={(e) => handleChange("height", e.target.value ? Number(e.target.value) : null)}
-                                            className="mt-1 input w-full"
-                                        />
-                                    ) : (
-                                        <div className="mt-1">{profile.height ?? "-"}</div>
-                                    )}
-                                </div>
+                                {(isEditing || (profile.height !== undefined && profile.height !== null)) && (
+                                    <div>
+                                        <label className="block text-xs sm:text-sm font-medium text-muted mb-2">Height (cm)</label>
+                                        {isEditing ? (
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={draft.height ?? ""}
+                                                onChange={(e) => handleChange("height", e.target.value ? Number(e.target.value) : null)}
+                                                className="input-responsive w-full text-sm"
+                                                style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
+                                            />
+                                        ) : (
+                                            <div className="text-default text-sm sm:text-base">{profile.height}</div>
+                                        )}
+                                    </div>
+                                )}
                             </>
                         )}
 
+                        {/* Seller-only fields */}
                         {isSeller && (
                             <>
-                                <div className="sm:col-span-2">
-                                    <label className="block text-sm text-gray-600">Store name</label>
-                                    {isEditing ? (
-                                        <input
-                                            value={String(draft.store_name ?? "")}
-                                            onChange={(e) => handleChange("store_name", e.target.value ?? null)}
-                                            className="mt-1 input w-full"
-                                        />
-                                    ) : (
-                                        <div className="mt-1">{profile.store_name ?? "-"}</div>
-                                    )}
-                                </div>
+                                {(isEditing || (profile.store_name && profile.store_name.length > 0)) && (
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-xs sm:text-sm font-medium text-muted mb-2">Store Name</label>
+                                        {isEditing ? (
+                                            <input
+                                                value={String(draft.store_name ?? "")}
+                                                onChange={(e) => handleChange("store_name", e.target.value ?? null)}
+                                                className="input-responsive w-full text-sm"
+                                                style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
+                                            />
+                                        ) : (
+                                            <div className="text-default text-sm sm:text-base">{profile.store_name}</div>
+                                        )}
+                                    </div>
+                                )}
 
-                                <div className="sm:col-span-2">
-                                    <label className="block text-sm text-gray-600">Business address</label>
-                                    {isEditing ? (
-                                        <textarea
-                                            value={String(draft.business_address ?? "")}
-                                            onChange={(e) => handleChange("business_address", e.target.value ?? null)}
-                                            className="mt-1 input w-full h-24"
-                                        />
-                                    ) : (
-                                        <div className="mt-1">{profile.business_address ?? "-"}</div>
-                                    )}
-                                </div>
+                                {(isEditing || (profile.business_address && profile.business_address.length > 0)) && (
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-xs sm:text-sm font-medium text-muted mb-2">Business Address</label>
+                                        {isEditing ? (
+                                            <textarea
+                                                value={String(draft.business_address ?? "")}
+                                                onChange={(e) => handleChange("business_address", e.target.value ?? null)}
+                                                className="input-responsive w-full h-20 text-sm resize-none"
+                                                style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
+                                            />
+                                        ) : (
+                                            <div className="text-default text-sm sm:text-base">{profile.business_address}</div>
+                                        )}
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>
