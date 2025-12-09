@@ -89,9 +89,21 @@ export default function ProductCard({
                                 await api.post('/api/cart/', { product: product.id, qty: 1 })
                                 try { dispatch(fetchCart() as any) } catch { }
                                 navigate(`/cart?added=${product.id}`)
-                            } catch (err) {
+                            } catch (err: any) {
                                 console.error('Add to cart failed', err)
-                                alert('Failed to add to cart')
+                                const status = err?.response?.status
+                                const data = err?.response?.data
+                                if (status === 401) {
+                                    alert('You must be logged in to add items to the cart.')
+                                    window.location.href = '/auth/login'
+                                } else if (status === 403) {
+                                    alert('You do not have permission to add items to the cart.')
+                                } else if (status === 404) {
+                                    alert('Cart service not available (404). Make sure backend is running and the /api/cart/ endpoint exists.')
+                                } else {
+                                    const msg = data?.error || data?.detail || data || err.message || 'Failed to add to cart'
+                                    alert(`Add to cart failed: ${msg}`)
+                                }
                             }
                         }}
                         className="w-full btn-primary text-white text-sm font-medium py-2 rounded-lg mt-3 opacity-0 group-hover:opacity-100 transition-all"

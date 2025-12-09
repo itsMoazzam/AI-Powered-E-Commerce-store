@@ -22,9 +22,12 @@ const initialState: CartState = {
 }
 
 // ✅ fetch cart from backend
+import { normalizeCartResponse } from "../lib/cart"
+
 export const fetchCart = createAsyncThunk("cart/fetch", async () => {
     const { data } = await api.get("/api/cart/")
-    return data.items || []
+    const normalized = normalizeCartResponse(data)
+    return normalized.items || []
 })
 
 const cartSlice = createSlice({

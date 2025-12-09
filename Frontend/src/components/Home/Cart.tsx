@@ -22,7 +22,21 @@ export default function CartDrawer({ open, setOpen }: { open: boolean; setOpen: 
         try {
             setLoading(true)
             const { data } = await api.get('/api/cart/')
-            setCartItems(data.items || [])
+            // normalize backend shape to frontend-friendly items
+            const normalized = (await import('../../lib/cart')).normalizeCartResponse(data)
+            // Defensive: ensure items contain primitive fields consumers expect
+            const safe = (normalized.items || []).map((it: any) => ({
+                id: it.id,
+                product: undefined,
+                // preserve compatibility: product.* accessors in this component will fallback
+                // but we provide safe title/thumbnail/price/quantity fields
+                title: String(it.title ?? ''),
+                thumbnail: String(it.thumbnail ?? ''),
+                price: Number(it.price ?? 0),
+                quantity: Number(it.qty ?? it.quantity ?? 1),
+                subtotal: Number(it.subtotal ?? (Number(it.price ?? 0) * Number(it.qty ?? 1)))
+            }))
+            setCartItems(safe)
         } catch (err: any) {
             console.error('❌ Failed to load cart:', err);
         } finally { setLoading(false) }
@@ -78,16 +92,16 @@ export default function CartDrawer({ open, setOpen }: { open: boolean; setOpen: 
                                             {cartItems.map((item) => (
                                                 <li key={item.id} className="flex gap-3 sm:gap-4 py-4">
                                                     <img
-                                                        src={item.product?.image || "/placeholder.png"}
-                                                        alt={item.product?.name || "Product"}
+                                                        src={item.thumbnail || "/placeholder.png"}
+                                                        alt={item.title || "Product"}
                                                         className="h-20 w-20 sm:h-24 sm:w-24 rounded-lg border border-card object-cover flex-shrink-0"
                                                     />
                                                     <div className="flex-1 flex flex-col min-w-0">
-                                                        <h3 className="text-sm sm:text-base font-semibold text-default truncate">{item.product?.name}</h3>
+                                                        <h3 className="text-sm sm:text-base font-semibold text-default truncate">{String(item.title ?? '')}</h3>
                                                         <div className="flex justify-between items-start mt-1">
                                                             <div>
-                                                                <p className="text-xs sm:text-sm text-muted">Qty: <span className="font-medium">{item.quantity}</span></p>
-                                                                <p className="text-sm sm:text-base font-bold text-default mt-1">${(item.price * item.quantity).toFixed(2)}</p>
+                                                                <p className="text-xs sm:text-sm text-muted">Qty: <span className="font-medium">{Number(item.quantity ?? 1)}</span></p>
+                                                                <p className="text-sm sm:text-base font-bold text-default mt-1">${(Number(item.price ?? 0) * Number(item.quantity ?? 1)).toFixed(2)}</p>
                                                             </div>
                                                         </div>
                                                         <button

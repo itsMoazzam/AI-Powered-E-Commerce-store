@@ -412,7 +412,19 @@ export default function ProductDetailPage() {
                                         navigate(`/cart?added=${product.id}`)
                                     } catch (err) {
                                         console.error('Add to cart failed', err)
-                                        alert('Failed to add to cart')
+                                        const status = (err as any)?.response?.status
+                                        const data = (err as any)?.response?.data
+                                        if (status === 401) {
+                                            alert('You must be logged in to add items to the cart.')
+                                            window.location.href = '/auth/login'
+                                        } else if (status === 403) {
+                                            alert('You do not have permission to add items to the cart.')
+                                        } else if (status === 404) {
+                                            alert('Cart service not available (404)')
+                                        } else {
+                                            const msg = data?.error || data?.detail || data || (err as any).message || 'Failed to add to cart'
+                                            alert(`Add to cart failed: ${msg}`)
+                                        }
                                     }
                                 }}
                                 className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium shadow-sm transition"

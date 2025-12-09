@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import api from "../lib/api"
 import { Link } from "react-router-dom"
 import { Trash2, Plus, Minus, ShoppingBag, Truck, ShieldCheck } from "lucide-react"
+import { normalizeCartResponse } from "../lib/cart"
 
 type CartItem = {
     id: number
@@ -27,7 +28,8 @@ export default function Cart() {
     async function fetchCart() {
         try {
             const { data } = await api.get("/api/cart/")
-            setCart(data)
+            const normalized = normalizeCartResponse(data)
+            setCart(normalized)
         } catch (err) {
             console.error("Failed to fetch cart", err)
         } finally {
@@ -42,16 +44,28 @@ export default function Cart() {
     async function updateQty(id: number, qty: number) {
         if (qty < 1) return
         setUpdating(id)
-        await api.patch(`/api/cart/${id}/`, { qty })
-        await fetchCart()
-        setUpdating(null)
+        try {
+            await api.patch(`/api/cart/${id}/`, { qty })
+            await fetchCart()
+        } catch (err) {
+            console.error('Failed to update qty:', err)
+            alert(`Failed to update quantity: ${(err as any)?.response?.data?.detail || (err as any)?.message || 'Unknown error'}`)
+        } finally {
+            setUpdating(null)
+        }
     }
 
     async function removeItem(id: number) {
         setUpdating(id)
-        await api.delete(`/api/cart/${id}/`)
-        await fetchCart()
-        setUpdating(null)
+        try {
+            await api.delete(`/api/cart/${id}/`)
+            await fetchCart()
+        } catch (err) {
+            console.error('Failed to remove item:', err)
+            alert(`Failed to remove item: ${(err as any)?.response?.data?.detail || (err as any)?.message || 'Unknown error'}`)
+        } finally {
+            setUpdating(null)
+        }
     }
 
     if (loading)
@@ -91,16 +105,16 @@ export default function Cart() {
                         >
                             <div className="flex items-center gap-5 w-full sm:w-auto">
                                 <img
-                                    src={it.thumbnail}
-                                    alt={it.title}
+                                    src={String(it.thumbnail || '')}
+                                    alt={String(it.title || '')}
                                     className="w-24 h-24 rounded-xl object-cover border border-zinc-200"
                                 />
                                 <div>
                                     <h3 className="font-medium text-gray-900 text-base line-clamp-2">
-                                        {it.title}
+                                        {String(it.title ?? '')}
                                     </h3>
                                     <p className="text-sm text-gray-500">
-                                        ${it.price.toFixed(2)} each
+                                        ${Number(it.price ?? 0).toFixed(2)} each
                                     </p>
                                     <div className="flex items-center mt-2 gap-2">
                                         <button
@@ -126,7 +140,7 @@ export default function Cart() {
 
                             <div className="text-right w-full sm:w-auto">
                                 <div className="font-semibold text-lg text-gray-800">
-                                    ${(it.price * it.qty).toFixed(2)}
+                                    ${(Number(it.price ?? 0) * Number(it.qty ?? 0)).toFixed(2)}
                                 </div>
                                 <button
                                     onClick={() => removeItem(it.id)}
@@ -148,17 +162,17 @@ export default function Cart() {
                 <div className="space-y-2 text-gray-700">
                     <div className="flex justify-between">
                         <span>Subtotal</span>
-                        <span>${cart.total.toFixed(2)}</span>
+                        <span>${Number(cart.total ?? 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                         <span>Shipping</span>
                         <span className={cart.shipping === 0 ? "text-green-600 font-medium" : ""}>
-                            {cart.shipping === 0 ? "Free" : `$${cart.shipping.toFixed(2)}`}
+                            {cart.shipping === 0 ? "Free" : `$${Number(cart.shipping ?? 0).toFixed(2)}`}
                         </span>
                     </div>
                     <div className="flex justify-between font-semibold text-lg border-t border-zinc-200 pt-3">
                         <span>Total</span>
-                        <span>${cart.grand_total.toFixed(2)}</span>
+                        <span>${Number(cart.grand_total ?? 0).toFixed(2)}</span>
                     </div>
                 </div>
 
