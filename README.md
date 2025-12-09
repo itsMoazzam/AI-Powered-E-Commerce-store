@@ -1,123 +1,135 @@
-🛍️ E-Commerce Store (React + Vite + TypeScript)
-🚀 3D Models • ⚙️ AI Features • 🛒 Full Cart & Auth • 🔥 Modern UI
+# 🛍️ E-Commerce Store (React + Vite + TypeScript)
 
-This project is an E-Commerce web application built with React + Vite + TypeScript, featuring interactive 3D product models, AI-powered features, and a complete shopping experience including authentication, product catalog, and shopping cart system.
-Developed as part of my Final Year Project (FYP).
+🚀 **3D Models** • ⚙️ **AI Features** • 🛒 **Full Cart & Auth** • 🔥 **Modern UI**
 
-✨ Features
-🛒 Ecommerce Core
+This project is a fully-featured **E-Commerce web application** built with **React + Vite + TypeScript**, featuring **interactive 3D product models**, **AI-powered features**, and a complete shopping experience including **authentication**, **product catalog**, and **shopping cart system**.
 
-Product catalog with categories
+> 🎓 Developed as part of our **Final Year Project (FYP)**.
 
-Product detail pages
+---
 
-Add to cart / remove from cart
+## ✨ Features
 
-Cart summary & checkout
+### 🛒 Ecommerce Core
 
-JWT-based user authentication
+* Product catalog with categories
+* Product detail pages
+* Add to cart / remove from cart
+* Cart summary & checkout
+* JWT-based user authentication
+* Fully responsive UI for all devices
 
-Responsive UI for all devices
+---
 
-🧠 AI-Powered Features
+### 🧠 AI-Powered Features
 
-AI-based product recommendations
+* AI-based product recommendations
+* Smart NLP-based product search
+* Virtual shopping assistant (AI chatbot)
+* Intelligent product suggestions
 
-Smart NLP search
+---
 
-Virtual shopping assistant (AI chatbot)
+### 🎨 3D Models (WebGL / Three.js)
 
-Intelligent product suggestions
+* Real-time 3D product previews
+* Interactive orbit controls
+* GLB / GLTF model support
+* Optimized models for high performance
 
-🎨 3D Models (WebGL / Three.js)
+---
 
-Real-time 3D product previews
+## ⚡ Tech Stack
 
-Interactive orbit controls
+### ✅ Frontend
 
-GLB / GLTF support
+* React
+* Vite
+* TypeScript
+* React Router
+* Zustand / Redux
+* Axios
+* Three.js / react-three-fiber
 
-Optimized models for performance
+---
 
-⚡ Tech Stack
+### ✅ Backend
 
-Frontend
+* Django
+* Django REST Framework
+* JWT Authentication
+* PostgreSQL
+* AI Integration (Python ML / LLMs)
 
-React
+---
 
-Vite
+## 🚀 Getting Started
 
-TypeScript
+### 1️⃣ Clone the repository
 
-React Router
-
-Zustand / Redux
-
-Axios
-
-Three.js / react-three-fiber
-
-Backend
-
-Django
-
-Django REST Framework
-
-JWT Auth
-
-PostgreSQL
-
-AI integration (Python ML/LLMs)
-
-📂 Project Structure (Frontend)
-/src
- ├── components/
- ├── pages/
- │    ├── Home.tsx
- │    ├── Cart.tsx
- │    ├── ProductView.tsx
- │    └── Login.tsx
- ├── models/      # 3D assets and loaders
- ├── hooks/
- ├── store/
- ├── services/    # API integration
- ├── assets/
- ├── styles/
- └── main.tsx
-
-🚀 Getting Started
-1️⃣ Clone the repository
+```bash
 git clone <your-repo-url>
 cd your-project-folder
+```
 
-2️⃣ Install dependencies
+### 2️⃣ Install dependencies
+
+```bash
 npm install
+```
 
-3️⃣ Start development server
+### 3️⃣ Start development server
+
+```bash
 npm run dev
+```
 
-🔗 Backend API
+---
+
+## 🔗 Backend API
 
 The frontend communicates with the backend at:
 
+```
 http://127.0.0.1:8000/api/
+```
 
+### 🔗 Backend Repository
 
-Backend repository link:
+```
 (Add your backend repo link here)
+```
 
-🧪 Roadmap
+---
 
-Payment Gateway (Stripe / PayPal)
+## 🧪 Roadmap
 
-Wishlist system
+* ✅ Payment Gateway (Stripe / PayPal)
+* ✅ Wishlist System
+* ✅ AI Image-to-Product Matching
+* ✅ AR Product Viewer (WebXR)
+* ✅ Admin Dashboard
 
-AI image-to-product matching
+---
 
-AR product viewer (WebXR)
+## 👨‍💻 Authors
 
-Admin dashboard
+### ✨ Moazzam Tanveer
 
-📜 License
+* Role: Full Stack Developer (MERN + Django)
+* Email: [ranamoazam954@gmail.com](mailto:ranamoazam954@gmail.com)
+* GitHub: [https://itsMoazzam](https://itsMoazzam)
 
-This project is for educational and research purposes (FYP).
+### ✨ Azeem Amjad
+
+* Role: AI Developer (AI + Django)
+* Email: [azeemamjsd225@gmail.com](mailto:azeemamjsd225@gmail.com)
+* GitHub: [https://github.com/azeemamjad](https://github.com/azeemamjad)
+
+---
+
+## 📜 License
+
+This project is developed strictly for **educational and research purposes (Final Year Project)**.
+
+---
