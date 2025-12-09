@@ -152,7 +152,9 @@ export default function Checkout() {
                 ; (async () => {
                     try {
                         const { data } = await api.get('/api/cart/')
-                        const loaded = (data.items || []).map((it: any) => ({ id: it.id, name: it.product?.name || it.title || it.product, qty: it.quantity || it.qty || 1, price: it.price || it.unit_price || 0 }))
+                        const { normalizeCartResponse } = await import('../lib/cart')
+                        const normalized = normalizeCartResponse(data)
+                        const loaded = (normalized.items || []).map((it: any) => ({ id: it.id, name: String(it.title ?? ''), qty: Number(it.qty ?? it.quantity ?? 1), price: Number(it.price ?? 0) }))
                         setItems(loaded)
                     } catch (err) {
                         // ignore — user may proceed with manual items
