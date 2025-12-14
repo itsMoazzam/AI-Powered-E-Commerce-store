@@ -9,6 +9,9 @@ if (!stripeKey) {
     console.warn('Warning: STRIPE_SECRET_KEY not set. PaymentIntent creation will fail until you set STRIPE_SECRET_KEY in .env')
 }
 const stripe = Stripe(stripeKey)
+const { OAuth2Client } = require('google-auth-library')
+const googleClientId = process.env.GOOGLE_CLIENT_ID || ''
+const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null
 
 // CORS middleware for frontend dev server
 app.use((req, res, next) => {
@@ -37,6 +40,31 @@ app.post('/api/orders/', (req, res) => {
     orders[id] = order
     console.log('Created order', order)
     return res.json(order)
+})
+
+// Google sign-in verification (receives credential (ID token) from frontend)
+app.post('/api/auth/google-login/', async (req, res) => {
+    const { credential } = req.body || {}
+    if (!credential) return res.status(400).json({ error: 'credential missing' })
+    if (!googleClient) return res.status(500).json({ error: 'Server misconfigured: GOOGLE_CLIENT_ID missing' })
+
+    try {
+        const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: googleClientId })
+        const payload = ticket.getPayload()
+        // Minimal demo: return a fake token and user object
+        const user = {
+            id: payload.sub,
+            email: payload.email,
+            username: payload.name || payload.email,
+            picture: payload.picture || null,
+            role: 'customer'
+        }
+        const token = `demo-token-${Date.now()}`
+        return res.json({ access: token, user })
+    } catch (err) {
+        console.error('Google sign-in verification failed', err)
+        return res.status(401).json({ error: 'Invalid Google credential' })
+    }
 })
 
 // Create PaymentIntent for an order

@@ -1,17 +1,26 @@
 import { Outlet } from "react-router-dom"
 import { motion } from "framer-motion"
+import { useState } from "react"
 import NavBar from "../Home/NavBar"
+import ErrorBoundary from "../ErrorBoundary"
+import LoginModal from "../LoginModal"
 import { Footer, FooterCopyright, FooterIcon, FooterLink, FooterLinkGroup, FooterTitle } from "flowbite-react";
 import { BsDribbble, BsFacebook, BsGithub, BsInstagram, BsTwitter } from "react-icons/bs";
 import { useTheme } from "../../theme/ThemeProvider";
 
 export default function RootLayout() {
     const { theme } = useTheme();
+    const [loginModalOpen, setLoginModalOpen] = useState(false);
 
     return (
         <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
             {/* Navigation */}
-            <NavBar />
+            <ErrorBoundary>
+                <NavBar loginModalOpen={loginModalOpen} setLoginModalOpen={setLoginModalOpen} />
+            </ErrorBoundary>
+
+            {/* Login Modal */}
+            <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
 
             {/* Main Content */}
             <motion.main
@@ -20,7 +29,7 @@ export default function RootLayout() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
             >
-                <div className="py-6 sm:py-8 lg:py-12">
+                <div className="    max-w-7xl m-auto ">
                     <Outlet />
                 </div>
             </motion.main>

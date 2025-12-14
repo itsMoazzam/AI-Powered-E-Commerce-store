@@ -1,6 +1,6 @@
 export function printInvoice(order: any) {
-    try {
-        const html = [`
+  try {
+    const html = [`
       <html>
       <head>
         <title>Invoice ${order?.id ?? ''}</title>
@@ -26,8 +26,8 @@ export function printInvoice(order: any) {
               <tr>
                 <td>${i.name || i.title || i.product_name || i.product || 'Item'}</td>
                 <td>${i.qty ?? i.quantity ?? 1}</td>
-                <td>${(i.price ?? i.unit_price ?? 0).toFixed ? (i.price ?? i.unit_price ?? 0).toFixed(2) : (i.price ?? i.unit_price ?? 0)}</td>
-                <td>${((i.qty ?? i.quantity ?? 1) * (i.price ?? i.unit_price ?? 0)).toFixed ? ((i.qty ?? i.quantity ?? 1) * (i.price ?? i.unit_price ?? 0)).toFixed(2) : ((i.qty ?? i.quantity ?? 1) * (i.price ?? i.unit_price ?? 0))}</td>
+                <td>${Number(i.price ?? i.unit_price ?? 0).toFixed(2)}</td>
+                <td>${(Number(i.qty ?? i.quantity ?? 1) * Number(i.price ?? i.unit_price ?? 0)).toFixed(2)}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -37,17 +37,17 @@ export function printInvoice(order: any) {
       </html>
     `].join('')
 
-        const w = window.open('', '_blank')
-        if (!w) return
-        w.document.open()
-        w.document.write(html)
-        w.document.close()
-        // give the window a moment
-        setTimeout(() => {
-            try { w.focus(); w.print(); } catch (e) { /* ignore */ }
-        }, 300)
-    } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn('printInvoice failed', err)
-    }
+    const w = window.open('', '_blank')
+    if (!w) return
+    w.document.open()
+    w.document.write(html)
+    w.document.close()
+    // give the window a moment
+    setTimeout(() => {
+      try { w.focus(); w.print(); } catch (e) { /* ignore */ }
+    }, 300)
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('printInvoice failed', err)
+  }
 }

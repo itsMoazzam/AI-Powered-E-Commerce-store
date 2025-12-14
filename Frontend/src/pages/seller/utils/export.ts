@@ -1,6 +1,6 @@
 
 // FILE: src/pages/seller/utils/export.ts
-export function exportToCSV(filename: string, rows: Array<Record<string, unknown>>) {
+export function exportToCSV(filename: string, rows: any[]) {
     if (!rows || !rows.length) { alert('No rows to export'); return }
     const header = Object.keys(rows[0])
     const csv = [

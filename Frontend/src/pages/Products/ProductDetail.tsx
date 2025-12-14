@@ -14,8 +14,7 @@ import {
     Ruler,
 } from "lucide-react"
 import api from "../../lib/api"
-import { useDispatch } from 'react-redux'
-import { fetchCart } from '../../store/Cart'
+import { addToCart } from '../../lib/cart'
 import { useNavigate } from 'react-router-dom'
 import axios from "axios"
 import ReviewForm from "../../components/Reviews/ReviewForm"
@@ -65,7 +64,7 @@ export default function ProductDetailPage() {
     const [error, setError] = useState<string | null>(null)
     const [currentImage, setCurrentImage] = useState(0)
     const [show3D, setShow3D] = useState(false)
-    const dispatch = useDispatch()
+    const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
     const navigate = useNavigate()
 
     const detect3DModel = (data: any): string | null => {
@@ -123,6 +122,36 @@ export default function ProductDetailPage() {
         fetchProduct();
         return () => controller.abort();
     }, [id])
+
+    // Fetch related products when product data is available
+    useEffect(() => {
+        if (!product) return;
+        let isMounted = true;
+        (async () => {
+            try {
+                // Prefer category-based related products if available
+                if (product.category) {
+                    const res = await api.get(`/api/products/?category_slug=${encodeURIComponent(String(product.category))}&page_size=8`)
+                    const list = res?.data?.results ?? res?.data ?? []
+                    const filtered = Array.isArray(list) ? list.filter((p: any) => Number(p.id) !== Number(product.id)).slice(0, 8) : []
+                    if (isMounted) setRelatedProducts(filtered)
+                    return
+                }
+
+                // Fallback: search by title keyword
+                const keyword = String(product.title || '').split(' ')[0]
+                if (keyword) {
+                    const res = await api.get(`/api/products/?search_text=${encodeURIComponent(keyword)}&page_size=8`)
+                    const list = res?.data?.results ?? res?.data ?? []
+                    const filtered = Array.isArray(list) ? list.filter((p: any) => Number(p.id) !== Number(product.id)).slice(0, 8) : []
+                    if (isMounted) setRelatedProducts(filtered)
+                }
+            } catch (err) {
+                console.warn('Failed to fetch related products', err)
+            }
+        })()
+        return () => { isMounted = false }
+    }, [product])
 
     if (loading)
         return (
@@ -260,7 +289,7 @@ export default function ProductDetailPage() {
                                                 data-product-title={product.title}
                                             >
                                                 {images.map((src, index) => (
-                                                    <li key={index} className="mr-6">
+                                                    <li key={`thumb-${index}`} className="mr-6">
                                                         <button
                                                             className={`product-thumbnail ${index === 2 ? "border" : "" // Example: mark one as active
                                                                 }`}
@@ -336,7 +365,7 @@ export default function ProductDetailPage() {
                         <div className="flex items-center gap-2 mb-4">
                             <div className="flex text-yellow-500">
                                 {Array.from({ length: 5 }).map((_, i) => (
-                                    <Star key={i} size={16} fill={i < Math.round(product.rating || 0) ? "currentColor" : "none"} />
+                                    <Star key={`star-${i}`} size={16} fill={i < Math.round(product.rating || 0) ? "currentColor" : "none"} />
                                 ))}
                             </div>
                             <span className="text-sm text-gray-500">
@@ -388,7 +417,7 @@ export default function ProductDetailPage() {
                                 <h3 className="font-semibold text-default text-sm uppercase tracking-wide">Specifications</h3>
                                 <div className="grid gap-2">
                                     {attrs.map((attr, idx) => (
-                                        <div key={idx} className="flex justify-between items-start p-2 rounded bg-black/5 dark:bg-white/5">
+                                        <div key={`attr-${idx}`} className="flex justify-between items-start p-2 rounded bg-black/5 dark:bg-white/5">
                                             <span className="font-medium text-sm text-muted">{attr.key}</span>
                                             <span className="text-sm text-default">{attr.value}</span>
                                         </div>
@@ -399,33 +428,26 @@ export default function ProductDetailPage() {
 
                         <div className="mt-6 flex gap-3">
                             <button
-                                onClick={async () => {
+                                onClick={() => {
+                                    // Add to cart (local storage only - no API call)
                                     const role = localStorage.getItem('role')
                                     if (role !== 'customer') {
                                         alert('Only customers can add items to cart. Please log in as a customer.')
                                         return
                                     }
-                                    try {
-                                        await api.post('/api/cart/', { product: product.id, qty: 1 })
-                                        try { dispatch(fetchCart() as any) } catch { }
-                                        // navigate to cart page so user can review the added product
-                                        navigate(`/cart?added=${product.id}`)
-                                    } catch (err) {
-                                        console.error('Add to cart failed', err)
-                                        const status = (err as any)?.response?.status
-                                        const data = (err as any)?.response?.data
-                                        if (status === 401) {
-                                            alert('You must be logged in to add items to the cart.')
-                                            window.location.href = '/auth/login'
-                                        } else if (status === 403) {
-                                            alert('You do not have permission to add items to the cart.')
-                                        } else if (status === 404) {
-                                            alert('Cart service not available (404)')
-                                        } else {
-                                            const msg = data?.error || data?.detail || data || (err as any).message || 'Failed to add to cart'
-                                            alert(`Add to cart failed: ${msg}`)
-                                        }
-                                    }
+
+                                    // Add to localStorage cart
+                                    addToCart({
+                                        id: product.id,
+                                        title: product.title,
+                                        thumbnail: product.thumbnail,
+                                        price: Number(product.price),
+                                        seller: product.seller
+                                    })
+
+                                    alert(`✅ Added "${product.title}" to cart!`)
+                                    // Optionally navigate to cart to show updated items
+                                    navigate(`/cart?added=${product.id}`)
                                 }}
                                 className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium shadow-sm transition"
                             >
@@ -468,6 +490,24 @@ export default function ProductDetailPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Related products */}
+            {relatedProducts.length > 0 && (
+                <div className="mx-auto mt-8 max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <h3 className="text-xl font-semibold mb-4">Related products</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {relatedProducts.map((rp) => (
+                            <div key={rp.id} className="bg-white rounded p-2 border">
+                                <Link to={`/product/${rp.id}`}>
+                                    <img src={rp.thumbnail || '/placeholder.png'} alt={rp.title} className="w-full h-40 object-cover rounded" />
+                                    <div className="mt-2 text-sm font-medium truncate">{rp.title}</div>
+                                    <div className="text-sm text-muted">${Number(rp.price ?? 0).toFixed(2)}</div>
+                                </Link>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </motion.div>
     )
 }

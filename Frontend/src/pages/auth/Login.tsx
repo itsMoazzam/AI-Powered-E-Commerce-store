@@ -6,6 +6,9 @@ import { setAuth } from "../../store/auth";
 import { Eye, EyeOff, X } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const GOOGLE_PROVIDER_PRESENT = typeof window !== 'undefined' && !!(window as any).__GOOGLE_OAUTH_PROVIDER__;
+
 export default function Login() {
     const dispatch = useDispatch<AppDispatch>();
     const [username, setusername] = useState("");
@@ -207,38 +210,44 @@ export default function Login() {
 
                 {/* Continue with Google */}
                 <div className="mt-4 flex items-center justify-center">
-                    <GoogleLogin
-                        onSuccess={async (credentialResponse) => {
-                            const credential = (credentialResponse as any)?.credential;
-                            if (!credential) return;
-                            setError("");
-                            try {
-                                // send credential to backend for verification / login
-                                const { data } = await api.post("/api/auth/google-login/", { credential });
-                                const token = data?.access ?? data?.token ?? null;
-                                const user = data?.user ?? null;
-                                const role = user?.role ?? data?.role ?? null;
+                    {GOOGLE_CLIENT_ID && GOOGLE_PROVIDER_PRESENT ? (
+                        <GoogleLogin
+                            onSuccess={async (credentialResponse) => {
+                                const credential = (credentialResponse as any)?.credential;
+                                if (!credential) return;
+                                setError("");
+                                try {
+                                    // send credential to backend for verification / login
+                                    const { data } = await api.post("/api/auth/google-login/", { credential });
+                                    const token = data?.access ?? data?.token ?? null;
+                                    const user = data?.user ?? null;
+                                    const role = user?.role ?? data?.role ?? null;
 
-                                if (!token || !user) {
-                                    setError("Unexpected server response from Google sign-in. Please try regular login.");
-                                    // no-op
-                                    return;
+                                    if (!token || !user) {
+                                        setError("Unexpected server response from Google sign-in. Please try regular login.");
+                                        // no-op
+                                        return;
+                                    }
+
+                                    dispatch(setAuth({ token, role, user }));
+
+                                    if (user?.is_superuser) location.href = "/admin";
+                                    else if (role === "seller") location.href = "/seller";
+                                    else location.href = "/profile";
+                                } catch (err) {
+                                    console.error("Google login error:", err);
+                                    setError("Google sign-in failed. Please try again or use regular login.");
                                 }
-
-                                dispatch(setAuth({ token, role, user }));
-
-                                if (user?.is_superuser) location.href = "/admin";
-                                else if (role === "seller") location.href = "/seller";
-                                else location.href = "/profile";
-                            } catch (err) {
-                                console.error("Google login error:", err);
-                                setError("Google sign-in failed. Please try again or use regular login.");
-                            }
-                        }}
-                        onError={() => {
-                            setError("Google sign-in failed. Please try again.");
-                        }}
-                    />
+                            }}
+                            onError={() => {
+                                const origin = typeof window !== 'undefined' ? window.location.origin : 'unknown'
+                                console.error('[GoogleLogin] onError - current origin:', origin)
+                                setError("Google sign-in failed. Possible cause: 'The given origin is not allowed for the given client ID'.\nPlease add your app origin (for example, http://localhost:5173) to the OAuth client's 'Authorized JavaScript origins' in Google Cloud Console. See project docs: GOOGLE_OAUTH_FIX.md")
+                            }}
+                        />
+                    ) : (
+                        <div className="text-xs text-muted">Google sign-in currently unavailable (provider not enabled).</div>
+                    )}
                 </div>
 
                 {/* Footer */}

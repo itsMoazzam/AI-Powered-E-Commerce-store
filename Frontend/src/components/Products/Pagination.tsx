@@ -58,18 +58,17 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
         {getPageNumbers().map((page, index) => (
           typeof page === 'number' ? (
             <button
-              key={index}
+              key={`page-${page}-${index}`}
               onClick={() => onPageChange(page)}
-              className={`px-2 md:px-3 py-1 text-sm md:text-base rounded ${
-                currentPage === page
+              className={`px-2 md:px-3 py-1 text-sm md:text-base rounded ${currentPage === page
                   ? 'bg-blue-500 text-white'
                   : 'border hover:bg-gray-100'
-              }`}
+                }`}
             >
               {page}
             </button>
           ) : (
-            <span key={index} className="px-1 md:px-2 text-sm md:text-base self-center">
+            <span key={`page-ellipsis-${index}`} className="px-1 md:px-2 text-sm md:text-base self-center">
               {page}
             </span>
           )

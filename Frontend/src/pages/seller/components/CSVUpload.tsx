@@ -21,10 +21,10 @@ export default function CSVUpload({ onImported }: CSVUploadProps) {
         Papa.parse<Record<string, string>>(f, {
             header: true,
             skipEmptyLines: true,
-            complete: (res) => {
+            complete: (res: any) => {
                 setPreviewRows(res.data)
             },
-            error: (err) => {
+            error: (err: any) => {
                 console.error("❌ CSV parse failed:", err)
                 alert("CSV parsing failed. Please check your file format.")
             },
@@ -113,10 +113,10 @@ export default function CSVUpload({ onImported }: CSVUploadProps) {
                                 </thead>
                                 <tbody>
                                     {previewRows.slice(0, 5).map((row, i) => (
-                                        <tr key={i} className="odd:bg-white even:bg-zinc-50">
+                                        <tr key={`csvrow-${i}`} className="odd:bg-white even:bg-zinc-50">
                                             {Object.keys(row).map((k) => (
                                                 <td
-                                                    key={k}
+                                                    key={`csvcol-${k}`}
                                                     className="px-3 py-2 border-b border-zinc-100 truncate max-w-xs"
                                                 >
                                                     {row[k]}

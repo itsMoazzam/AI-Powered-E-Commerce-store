@@ -207,7 +207,7 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
                 </div>
 
                 {images.map((img, i) => (
-                    <div key={i} className="grid md:grid-cols-3 gap-2 items-center">
+                    <div key={`image-${i}`} className="grid md:grid-cols-3 gap-2 items-center">
                         <input
                             type="file"
                             accept="image/*"
@@ -273,7 +273,7 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
                 </div>
 
                 {customFields.map((f, i) => (
-                    <div key={i} className="flex gap-2 items-center">
+                    <div key={`field-${i}`} className="flex gap-2 items-center">
                         <input
                             type="text"
                             placeholder="Key (e.g. Color)"

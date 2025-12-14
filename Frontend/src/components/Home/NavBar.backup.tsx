@@ -1,8 +1,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, Sun, Star, ChevronRight, LogOut } from "lucide-react";
-import { FaShoppingCart, FaSearch, FaHeart, FaHome, FaUser } from "react-icons/fa";
+import { Menu, X, Sun, Star } from "lucide-react";
+import { FaShoppingCart, FaSearch, FaHeart, FaHome } from "react-icons/fa";
 import CartDrawer from "./Cart";
 import { useTheme } from '../../theme/ThemeProvider'
 import { useSelector } from 'react-redux'

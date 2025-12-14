@@ -1,6 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import type { Role, CustomerForm, SellerForm } from "./Register";
 import { GoogleLogin } from "@react-oauth/google";
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const GOOGLE_PROVIDER_PRESENT = typeof window !== 'undefined' && !!(window as any).__GOOGLE_OAUTH_PROVIDER__;
 import api from "../../../lib/api";
 
 type GenericForm = CustomerForm | SellerForm;
@@ -211,81 +214,85 @@ export default function StepPersonal<T extends GenericForm>({
 
             <div className="flex items-center justify-center gap-4">
                 <div className="text-sm text-gray-500">Or sign up with</div>
-                <GoogleLogin
-                    onSuccess={(credentialResponse) => {
-                        try {
-                            const credential = (credentialResponse as any)?.credential;
-                            if (!credential) return;
-
-                            // decode the JWT payload without any external library
-                            const decodeJwt = (token: string) => {
-                                const parts = token.split('.');
-                                if (parts.length < 2) return null;
-                                const base64Url = parts[1];
-                                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                                try {
-                                    const jsonPayload = decodeURIComponent(
-                                        atob(base64)
-                                            .split('')
-                                            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-                                            .join('')
-                                    );
-                                    return JSON.parse(jsonPayload);
-                                } catch (e) {
-                                    return null;
-                                }
-                            };
-
-                            const payload = decodeJwt(credential) || ({} as any);
-                            const email = payload.email as string | undefined;
-                            const given_name = payload.given_name as string | undefined;
-                            const family_name = payload.family_name as string | undefined;
-                            const picture = payload.picture as string | undefined;
-                            const name = payload.name as string | undefined;
-
-                            // derive a username (safe fallback)
-                            const usernameFromEmail = email ? email.split('@')[0] : undefined;
-                            const username = (usernameFromEmail || name || given_name || 'user').replace(/\s+/g, '').toLowerCase();
-
-                            // generate a client-side random password (we cannot access the Google account password)
-                            let generatedPassword = 'pw_';
+                {GOOGLE_CLIENT_ID && GOOGLE_PROVIDER_PRESENT ? (
+                    <GoogleLogin
+                        onSuccess={(credentialResponse) => {
                             try {
-                                if (typeof crypto !== 'undefined' && (crypto as any).getRandomValues) {
-                                    const arr = new Uint8Array(16);
-                                    (crypto as any).getRandomValues(arr);
-                                    generatedPassword = Array.from(arr)
-                                        .map((b) => b.toString(16).padStart(2, '0'))
-                                        .join('');
-                                } else {
+                                const credential = (credentialResponse as any)?.credential;
+                                if (!credential) return;
+
+                                // decode the JWT payload without any external library
+                                const decodeJwt = (token: string) => {
+                                    const parts = token.split('.');
+                                    if (parts.length < 2) return null;
+                                    const base64Url = parts[1];
+                                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                                    try {
+                                        const jsonPayload = decodeURIComponent(
+                                            atob(base64)
+                                                .split('')
+                                                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                                                .join('')
+                                        );
+                                        return JSON.parse(jsonPayload);
+                                    } catch (e) {
+                                        return null;
+                                    }
+                                };
+
+                                const payload = decodeJwt(credential) || ({} as any);
+                                const email = payload.email as string | undefined;
+                                const given_name = payload.given_name as string | undefined;
+                                const family_name = payload.family_name as string | undefined;
+                                const picture = payload.picture as string | undefined;
+                                const name = payload.name as string | undefined;
+
+                                // derive a username (safe fallback)
+                                const usernameFromEmail = email ? email.split('@')[0] : undefined;
+                                const username = (usernameFromEmail || name || given_name || 'user').replace(/\s+/g, '').toLowerCase();
+
+                                // generate a client-side random password (we cannot access the Google account password)
+                                let generatedPassword = 'pw_';
+                                try {
+                                    if (typeof crypto !== 'undefined' && (crypto as any).getRandomValues) {
+                                        const arr = new Uint8Array(16);
+                                        (crypto as any).getRandomValues(arr);
+                                        generatedPassword = Array.from(arr)
+                                            .map((b) => b.toString(16).padStart(2, '0'))
+                                            .join('');
+                                    } else {
+                                        generatedPassword = Math.random().toString(36).slice(2) + Date.now().toString(36);
+                                    }
+                                } catch (e) {
                                     generatedPassword = Math.random().toString(36).slice(2) + Date.now().toString(36);
                                 }
-                            } catch (e) {
-                                generatedPassword = Math.random().toString(36).slice(2) + Date.now().toString(36);
-                            }
 
-                            // populate the form via supplied onChange handler
-                            // cast to any because T is generic
-                            onChange('username' as any, username as any);
-                            if (email) onChange('email' as any, email as any);
-                            if (given_name) onChange('first_name' as any, given_name as any);
-                            if (family_name) onChange('last_name' as any, family_name as any);
-                            if (picture) onChange('profile_photo' as any, picture as any);
-                            onChange('password' as any, generatedPassword as any);
+                                // populate the form via supplied onChange handler
+                                // cast to any because T is generic
+                                onChange('username' as any, username as any);
+                                if (email) onChange('email' as any, email as any);
+                                if (given_name) onChange('first_name' as any, given_name as any);
+                                if (family_name) onChange('last_name' as any, family_name as any);
+                                if (picture) onChange('profile_photo' as any, picture as any);
+                                onChange('password' as any, generatedPassword as any);
 
-                            // advance to next step in the flow (StepSeller/StepCustomer or review)
-                            if (typeof next === 'function') {
-                                // small timeout so parent state updates propagate before navigating
-                                setTimeout(() => next?.(), 150);
+                                // advance to next step in the flow (StepSeller/StepCustomer or review)
+                                if (typeof next === 'function') {
+                                    // small timeout so parent state updates propagate before navigating
+                                    setTimeout(() => next?.(), 150);
+                                }
+                            } catch (err) {
+                                // best-effort; don't block the user flow
+                                console.error('Google sign-in handling failed', err);
                             }
-                        } catch (err) {
-                            // best-effort; don't block the user flow
-                            console.error('Google sign-in handling failed', err);
-                        }
-                    }}
-                    onError={() => {
-                        console.log('Google login failed');
-                    }}
-                />
+                        }}
+                        onError={() => {
+                            console.log('Google login failed');
+                        }}
+                    />
+                ) : (
+                    <div className="text-xs text-gray-400">Google sign-up currently unavailable (provider not enabled).</div>
+                )}
             </div>
         </div>
     );

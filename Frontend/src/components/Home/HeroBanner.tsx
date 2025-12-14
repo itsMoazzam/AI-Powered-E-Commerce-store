@@ -30,7 +30,7 @@ const defaultSlides = [
         subtitle: "Fresh styles for every season.",
         cta_text: "Explore",
         cta_link: "/search?sort=new",
-        image: "https://images.unsplash.com/photo-1521335629791-ce4aec67dd53?auto=format&fit=crop&w=1600&q=80",
+        image: "https://koriah.com.au/cdn/shop/articles/kpop-outfits-a-visual-journey-into-the-world-of-kpop-fashion.jpg?v=1731290036",
     },
     {
         id: 3,
@@ -99,7 +99,7 @@ export default function HeroBanner() {
         <div className="relative w-full h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[80vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-lg">
             {slides.map((slide, index) => (
                 <div
-                    key={slide.id}
+                    key={`slide-${slide.id ?? index}-${index}`}
                     className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${current === index ? "opacity-100" : "opacity-0"
                         }`}
                 >
@@ -158,7 +158,7 @@ export default function HeroBanner() {
                     <div className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 flex gap-2 flex-wrap justify-center px-2">
                         {slides.map((_, i) => (
                             <button
-                                key={i}
+                                key={`dot-${i}`}
                                 onClick={() => setCurrent(i)}
                                 className={`rounded-full transition-all duration-300 ${i === current ? "scale-110" : "hover:scale-110"}`}
                                 style={{

@@ -122,7 +122,7 @@ const Register: React.FC = () => {
                 const value = activeForm[key];
                 if (value === undefined || value === "" || value === null) return;
 
-                if (value instanceof File) {
+                if ((value as any) instanceof File) {
                     payload.append(key, value);
                 } else {
                     payload.append(key, String(value));

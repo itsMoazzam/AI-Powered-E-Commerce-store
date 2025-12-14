@@ -70,7 +70,7 @@ export default function ProductCard({
                     {product.rating && (
                         <div className="flex items-center text-xs text-yellow-500 mt-1">
                             {Array.from({ length: 5 }).map((_, idx) => (
-                                <Star key={idx} size={14} fill={idx < Math.round(product.rating!) ? "currentColor" : "none"} />
+                                <Star key={`star-${product.id}-${idx}`} size={14} fill={idx < Math.round(product.rating!) ? "currentColor" : "none"} />
                             ))}
                             <span className="ml-1 text-muted">{product.rating.toFixed(1)}</span>
                         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import api from "../lib/api"
+import { savePendingOrder, confirmOrderToBackend } from '../lib/checkout'
 import { Loader2, CreditCard, ShoppingBag } from "lucide-react"
 import ReceiptUpload from "../components/ReceiptUpload"
 import { printInvoice } from "../lib/invoice"
@@ -48,7 +49,7 @@ export default function Checkout() {
 
         setLoading(true)
         try {
-            const order = {
+            const orderPayload = {
                 shipping_address: address,
                 items,
                 delivery_method: deliveryMethod,
@@ -58,37 +59,36 @@ export default function Checkout() {
                 total,
             }
 
-            const { data } = await api.post("/api/orders/", order)
-            console.log("Order placed:", data)
+            // Save order locally first (per-user localStorage)
+            const localId = savePendingOrder(orderPayload as any)
 
-            // attempt to log order details server-side (if endpoint exists)
+            // Try to notify backend with a single confirmation call. This is allowed to fail.
             try {
-                await api.post('/api/orders/log/', { order_id: data.id || null, payload: order })
+                await confirmOrderToBackend(localId as number, orderPayload as any)
             } catch (err) {
-                // non-fatal — logging endpoint may not exist
-                console.debug('order log endpoint missing or failed', err)
+                // confirmation failed - keep local copy and continue
+                console.debug('Backend confirmation failed; order stored locally.', err)
             }
 
-            // log locally
+            // Also store in orderHistory for user's reference
             try {
                 const raw = localStorage.getItem('orderHistory')
                 const arr = raw ? JSON.parse(raw) : []
-                arr.unshift({ id: data.id || Date.now(), total: total, created_at: new Date().toISOString(), items: order.items })
+                arr.unshift({ id: localId || Date.now(), total: total, created_at: new Date().toISOString(), items: orderPayload.items })
                 localStorage.setItem('orderHistory', JSON.stringify(arr))
             } catch { }
 
-            alert("✅ Order placed successfully!")
-            // open printable invoice
+            alert('✅ Order saved and confirmation sent (if available).')
             if (typeof printInvoice === 'function') {
-                try { printInvoice({ id: data.id || 'N/A', shipping_address: address, items, total }) } catch (err) { console.warn(err) }
+                try { printInvoice({ id: localId || 'N/A', shipping_address: address, items, total }) } catch (err) { console.warn(err) }
             }
 
             setStep(1)
             setAddress({})
             setPayment({ cardNumber: "", expiry: "", cvv: "" })
         } catch (err) {
-            console.error("Failed to place order", err)
-            alert("❌ Something went wrong.")
+            console.error("Failed to save order", err)
+            alert("❌ Something went wrong while saving the order locally.")
         } finally {
             setLoading(false)
         }

@@ -1,71 +1,43 @@
 import { useEffect, useState } from "react"
-import api from "../lib/api"
 import { Link } from "react-router-dom"
 import { Trash2, Plus, Minus, ShoppingBag, Truck, ShieldCheck } from "lucide-react"
-import { normalizeCartResponse } from "../lib/cart"
-
-type CartItem = {
-    id: number
-    title: string
-    thumbnail: string
-    price: number
-    qty: number
-    subtotal: number
-}
-
-type CartData = {
-    items: CartItem[]
-    total: number
-    shipping: number
-    grand_total: number
-}
+import { loadCartFromStorage, updateCartItemQty, removeFromCart, type CartState } from "../lib/cart"
 
 export default function Cart() {
-    const [cart, setCart] = useState<CartData | null>(null)
+    const [cart, setCart] = useState<CartState | null>(null)
     const [loading, setLoading] = useState(true)
-    const [updating, setUpdating] = useState<number | null>(null)
+    const [ownerLabel, setOwnerLabel] = useState<string | null>(null)
 
-    async function fetchCart() {
-        try {
-            const { data } = await api.get("/api/cart/")
-            const normalized = normalizeCartResponse(data)
-            setCart(normalized)
-        } catch (err) {
-            console.error("Failed to fetch cart", err)
-        } finally {
-            setLoading(false)
-        }
-    }
-
+    // Load cart from localStorage on mount
     useEffect(() => {
-        fetchCart()
+        const savedCart = loadCartFromStorage()
+        setCart(savedCart)
+        // read user info to show per-user label
+        try {
+            const raw = localStorage.getItem('user')
+            if (raw) {
+                const parsed = JSON.parse(raw)
+                setOwnerLabel(parsed?.username ?? parsed?.email ?? `user:${parsed?.id ?? 'unknown'}`)
+            } else {
+                setOwnerLabel('guest')
+            }
+        } catch (e) {
+            setOwnerLabel('guest')
+        }
+        setLoading(false)
     }, [])
 
-    async function updateQty(id: number, qty: number) {
-        if (qty < 1) return
-        setUpdating(id)
-        try {
-            await api.patch(`/api/cart/${id}/`, { qty })
-            await fetchCart()
-        } catch (err) {
-            console.error('Failed to update qty:', err)
-            alert(`Failed to update quantity: ${(err as any)?.response?.data?.detail || (err as any)?.message || 'Unknown error'}`)
-        } finally {
-            setUpdating(null)
-        }
+    // Update quantity (local only, no API call)
+    function handleUpdateQty(cartItemId: number, newQty: number) {
+        if (newQty < 1) return
+        const updated = updateCartItemQty(cartItemId, newQty)
+        setCart(updated)
     }
 
-    async function removeItem(id: number) {
-        setUpdating(id)
-        try {
-            await api.delete(`/api/cart/${id}/`)
-            await fetchCart()
-        } catch (err) {
-            console.error('Failed to remove item:', err)
-            alert(`Failed to remove item: ${(err as any)?.response?.data?.detail || (err as any)?.message || 'Unknown error'}`)
-        } finally {
-            setUpdating(null)
-        }
+    // Remove item (local only, no API call)
+    function handleRemoveItem(cartItemId: number) {
+        const updated = removeFromCart(cartItemId)
+        setCart(updated)
     }
 
     if (loading)
@@ -83,6 +55,7 @@ export default function Cart() {
                 <p className="text-zinc-500 mt-1 mb-6">
                     Looks like you haven’t added anything yet.
                 </p>
+                {ownerLabel && <div className="text-xs text-muted mb-4">Viewing cart for: <strong>{ownerLabel}</strong></div>}
                 <Link
                     to="/"
                     className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
@@ -98,39 +71,40 @@ export default function Cart() {
             <div className="md:col-span-2 bg-white rounded-2xl shadow-sm border border-zinc-100 p-6">
                 <h2 className="text-2xl font-semibold mb-4 text-gray-800">Shopping Cart</h2>
                 <div className="divide-y divide-zinc-200">
-                    {cart.items.map((it) => (
+                    {cart.items.map((item) => (
                         <div
-                            key={it.id}
+                            key={item.id}
                             className="py-5 flex flex-col sm:flex-row items-center justify-between gap-4 hover:bg-gray-50 transition rounded-xl px-2"
                         >
                             <div className="flex items-center gap-5 w-full sm:w-auto">
                                 <img
-                                    src={String(it.thumbnail || '')}
-                                    alt={String(it.title || '')}
+                                    src={String(item.thumbnail || '')}
+                                    alt={String(item.title || '')}
                                     className="w-24 h-24 rounded-xl object-cover border border-zinc-200"
+                                    onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/96?text=No+Image')}
                                 />
                                 <div>
                                     <h3 className="font-medium text-gray-900 text-base line-clamp-2">
-                                        {String(it.title ?? '')}
+                                        {String(item.title ?? '')}
                                     </h3>
                                     <p className="text-sm text-gray-500">
-                                        ${Number(it.price ?? 0).toFixed(2)} each
+                                        ${Number(item.price ?? 0).toFixed(2)} each
                                     </p>
                                     <div className="flex items-center mt-2 gap-2">
                                         <button
-                                            onClick={() => updateQty(it.id, it.qty - 1)}
-                                            disabled={updating === it.id}
-                                            className="p-1 rounded-full border border-zinc-300 hover:bg-zinc-100"
+                                            onClick={() => handleUpdateQty(item.id, item.qty - 1)}
+                                            className="p-1 rounded-full border border-zinc-300 hover:bg-zinc-100 transition"
+                                            title="Decrease quantity"
                                         >
                                             <Minus size={14} />
                                         </button>
                                         <span className="px-3 text-gray-800 font-semibold text-sm">
-                                            {it.qty}
+                                            {item.qty}
                                         </span>
                                         <button
-                                            onClick={() => updateQty(it.id, it.qty + 1)}
-                                            disabled={updating === it.id}
-                                            className="p-1 rounded-full border border-zinc-300 hover:bg-zinc-100"
+                                            onClick={() => handleUpdateQty(item.id, item.qty + 1)}
+                                            className="p-1 rounded-full border border-zinc-300 hover:bg-zinc-100 transition"
+                                            title="Increase quantity"
                                         >
                                             <Plus size={14} />
                                         </button>
@@ -140,12 +114,12 @@ export default function Cart() {
 
                             <div className="text-right w-full sm:w-auto">
                                 <div className="font-semibold text-lg text-gray-800">
-                                    ${(Number(it.price ?? 0) * Number(it.qty ?? 0)).toFixed(2)}
+                                    ${(Number(item.price ?? 0) * Number(item.qty ?? 0)).toFixed(2)}
                                 </div>
                                 <button
-                                    onClick={() => removeItem(it.id)}
-                                    disabled={updating === it.id}
-                                    className="text-red-500 hover:text-red-600 text-sm mt-2 flex items-center gap-1 justify-end"
+                                    onClick={() => handleRemoveItem(item.id)}
+                                    className="text-red-500 hover:text-red-600 text-sm mt-2 flex items-center gap-1 justify-end transition"
+                                    title="Remove item"
                                 >
                                     <Trash2 size={14} /> Remove
                                 </button>
@@ -179,6 +153,7 @@ export default function Cart() {
                 <Link
                     to="/checkout"
                     className="block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg mt-6 py-2.5 font-medium transition"
+                    title="Proceed to checkout (cart will sync to backend)"
                 >
                     Proceed to Checkout
                 </Link>
