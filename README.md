@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+# AI-Powered-E-Commerce-store
+=======
 # 🛍️ E-Commerce Store (React + Vite + TypeScript)
 
 🚀 **3D Models** • ⚙️ **AI Features** • 🛒 **Full Cart & Auth** • 🔥 **Modern UI**
@@ -133,3 +136,4 @@ http://127.0.0.1:8000/api/
 This project is developed strictly for **educational and research purposes (Final Year Project)**.
 
 ---
+>>>>>>> 46feb8b (Revise README for clarity and feature highlights)
