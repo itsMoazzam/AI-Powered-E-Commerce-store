@@ -4,6 +4,7 @@ import { Link } from "react-router-dom"
 import ProductCard from "./ProductCard"
 import AdCard from "./AdCard"
 import api from "../../lib/api"
+import { demoProducts } from '../../lib/demoProducts'
 
 type Item = { type: 'product'; data: any } | { type: 'ad'; data: any }
 
@@ -50,9 +51,19 @@ export default function ProductGrid() {
             // determine hasMore
             const next = res?.data?.next // DRF next link
             setHasMore(Boolean(next))
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to load products', err)
-            setError('Failed to load products')
+            // If unauthenticated or forbidden, fall back to demo products so home remains visible
+            const status = err?.response?.status
+            if (status === 401 || status === 403 || !status) {
+                // Use demo products for guests or when API isn't reachable
+                const demoSlice = demoProducts.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE)
+                setProducts((prev) => [...prev, ...demoSlice])
+                setHasMore(false)
+                setError(null)
+            } else {
+                setError('Failed to load products')
+            }
         } finally {
             setLoading(false)
             setLoadingMore(false)

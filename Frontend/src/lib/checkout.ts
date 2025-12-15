@@ -11,14 +11,38 @@ export type CheckoutPayload = {
 }
 
 const PENDING_KEY = 'intelligentCommerce_pending_orders'
+const ORDER_HISTORY_KEY = 'intelligentCommerce_orderHistory'
+
+function getUserIdOrGuest(): string {
+    try {
+        const raw = localStorage.getItem('user')
+        if (raw) {
+            const parsed = JSON.parse(raw)
+            const id = parsed?.id ?? parsed?.user_id ?? parsed?.pk ?? null
+            const uname = parsed?.username ?? parsed?.email ?? null
+            if (id) return String(id)
+            if (uname) return String(uname).replace(/[^a-z0-9_\-]/gi, '')
+        }
+    } catch (e) { }
+    return 'guest'
+}
+
+function pendingKeyForUser() {
+    return `${PENDING_KEY}_${getUserIdOrGuest()}`
+}
+
+function orderHistoryKeyForUser() {
+    return `${ORDER_HISTORY_KEY}_${getUserIdOrGuest()}`
+}
 
 export function savePendingOrder(payload: CheckoutPayload) {
     try {
-        const raw = localStorage.getItem(PENDING_KEY)
+        const key = pendingKeyForUser()
+        const raw = localStorage.getItem(key)
         const arr = raw ? JSON.parse(raw) : []
         const localId = Date.now()
         arr.push({ id: localId, created_at: new Date().toISOString(), payload })
-        localStorage.setItem(PENDING_KEY, JSON.stringify(arr))
+        localStorage.setItem(key, JSON.stringify(arr))
         return localId
     } catch (err) {
         console.error('Failed to save pending order', err)
@@ -28,11 +52,24 @@ export function savePendingOrder(payload: CheckoutPayload) {
 
 export function loadPendingOrders() {
     try {
-        const raw = localStorage.getItem(PENDING_KEY)
+        const key = pendingKeyForUser()
+        const raw = localStorage.getItem(key)
         return raw ? JSON.parse(raw) : []
     } catch (err) {
         console.error('Failed to load pending orders', err)
         return []
+    }
+}
+
+export function removePendingOrder(localId: number) {
+    try {
+        const key = pendingKeyForUser()
+        const raw = localStorage.getItem(key)
+        const arr = raw ? JSON.parse(raw) : []
+        const filtered = arr.filter((o: any) => o.id !== localId)
+        localStorage.setItem(key, JSON.stringify(filtered))
+    } catch (err) {
+        console.error('Failed to remove pending order', err)
     }
 }
 
@@ -46,6 +83,29 @@ export async function confirmOrderToBackend(localOrderId: number, payload: Check
         // If backend doesn't have endpoint, return error up the chain but keep local copy
         console.debug('confirmOrderToBackend failed', err)
         throw err
+    }
+}
+
+export function saveOrderHistoryEntry(entry: any) {
+    try {
+        const key = orderHistoryKeyForUser()
+        const raw = localStorage.getItem(key)
+        const arr = raw ? JSON.parse(raw) : []
+        arr.unshift(entry)
+        localStorage.setItem(key, JSON.stringify(arr))
+    } catch (err) {
+        console.error('Failed to save order history entry', err)
+    }
+}
+
+export function loadOrderHistory() {
+    try {
+        const key = orderHistoryKeyForUser()
+        const raw = localStorage.getItem(key)
+        return raw ? JSON.parse(raw) : []
+    } catch (err) {
+        console.error('Failed to load order history', err)
+        return []
     }
 }
 

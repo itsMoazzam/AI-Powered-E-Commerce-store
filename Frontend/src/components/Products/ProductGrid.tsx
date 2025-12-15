@@ -4,6 +4,7 @@ import api from "../../lib/api"
 import FilterSidebar from "./FilterSidebar"
 import type { FilterValues } from "./FilterSidebar"
 import Pagination from "./Pagination"
+import { demoProducts } from '../../lib/demoProducts'
 
 interface Product {
     id: number
@@ -27,9 +28,9 @@ interface Props {
     SearchText?: string | null;
 }
 
-export default function ProductGrid({ 
-    CategorySlug = null, 
-    SearchText = null 
+export default function ProductGrid({
+    CategorySlug = null,
+    SearchText = null
 }: Props = {}) {
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
@@ -85,9 +86,18 @@ export default function ProductGrid({
                 }))
 
                 setProducts(formattedProducts)
-            } catch (err) {
-                console.error("Error fetching products:", err)
-                setError("Failed to load products. Please try again later.")
+            } catch (err: any) {
+                // If API is missing or returns 404, fall back to demo products instead of failing hard
+                const status = err?.response?.status ?? null
+                if (status === 404 || status === 0 || /not found/i.test(String(err?.message || err))) {
+                    const demoSlice = demoProducts.slice((currentPage - 1) * PRODUCTS_PER_PAGE, currentPage * PRODUCTS_PER_PAGE)
+                    setProducts(demoSlice as any)
+                    setTotalProducts(demoProducts.length)
+                    setError(null)
+                } else {
+                    console.error("Error fetching products:", err)
+                    setError("Failed to load products. Please try again later.")
+                }
             } finally {
                 setLoading(false)
             }
@@ -120,7 +130,7 @@ export default function ProductGrid({
     return (
         <div className="md:flex relative min-h-screen">
             <FilterSidebar onFilterChange={setFilters} />
-            
+
             <section className="flex-1 px-4 md:px-8 py-6 md:py-10 bg-surface">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <h2 className="text-xl md:text-2xl font-bold text-default">Products</h2>
@@ -136,7 +146,7 @@ export default function ProductGrid({
                 </div>
 
                 <div className="mt-8 pb-20 md:pb-0"> {/* Added padding bottom for mobile to account for filter button */}
-                    <Pagination 
+                    <Pagination
                         currentPage={currentPage}
                         totalPages={totalPages}
                         onPageChange={setCurrentPage}

@@ -99,6 +99,16 @@ function calculateTotals(items: CartItem[]): { total: number; shipping: number; 
  * Add item to cart (or increase quantity if exists)
  */
 export function addToCart(product: any): CartState {
+    try {
+        const raw = localStorage.getItem('user')
+        if (!raw) throw new Error('User not logged in')
+        const parsed = JSON.parse(raw)
+        const role = parsed?.role || localStorage.getItem('role')
+        if (role !== 'customer') throw new Error('Only customers may add items to cart')
+    } catch (err) {
+        throw err
+    }
+
     const cart = loadCartFromStorage()
 
     const existingIndex = cart.items.findIndex(item => item.productId === product.id)

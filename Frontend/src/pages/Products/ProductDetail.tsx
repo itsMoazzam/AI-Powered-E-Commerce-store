@@ -432,22 +432,28 @@ export default function ProductDetailPage() {
                                     // Add to cart (local storage only - no API call)
                                     const role = localStorage.getItem('role')
                                     if (role !== 'customer') {
-                                        alert('Only customers can add items to cart. Please log in as a customer.')
+                                        // redirect guests to login
+                                        navigate('/auth/login')
                                         return
                                     }
 
                                     // Add to localStorage cart
-                                    addToCart({
-                                        id: product.id,
-                                        title: product.title,
-                                        thumbnail: product.thumbnail,
-                                        price: Number(product.price),
-                                        seller: product.seller
-                                    })
+                                    try {
+                                        addToCart({
+                                            id: product.id,
+                                            title: product.title,
+                                            thumbnail: product.thumbnail,
+                                            price: Number(product.price),
+                                            seller: product.seller
+                                        })
 
-                                    alert(`✅ Added "${product.title}" to cart!`)
-                                    // Optionally navigate to cart to show updated items
-                                    navigate(`/cart?added=${product.id}`)
+                                        alert(`✅ Added "${product.title}" to cart!`)
+                                        // Optionally navigate to cart to show updated items
+                                        navigate(`/cart?added=${product.id}`)
+                                    } catch (err: any) {
+                                        console.error('Failed to add to cart', err)
+                                        alert(err?.message || 'Failed to add to cart')
+                                    }
                                 }}
                                 className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium shadow-sm transition"
                             >
@@ -458,7 +464,7 @@ export default function ProductDetailPage() {
                                 onClick={async () => {
                                     const role = localStorage.getItem('role')
                                     if (role !== 'customer') {
-                                        alert('Only customers can purchase. Please log in as a customer.')
+                                        navigate('/auth/login')
                                         return
                                     }
                                     try {

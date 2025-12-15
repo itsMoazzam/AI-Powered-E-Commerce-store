@@ -11,16 +11,17 @@ import { useTheme } from "../../theme/ThemeProvider";
 export default function RootLayout() {
     const { theme } = useTheme();
     const [loginModalOpen, setLoginModalOpen] = useState(false);
+    const [loginAnchor, setLoginAnchor] = useState<{ top: number; left: number; bottom: number; right: number; width: number; height: number } | null>(null);
 
     return (
         <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
             {/* Navigation */}
             <ErrorBoundary>
-                <NavBar loginModalOpen={loginModalOpen} setLoginModalOpen={setLoginModalOpen} />
+                <NavBar loginModalOpen={loginModalOpen} setLoginModalOpen={setLoginModalOpen} setLoginAnchor={setLoginAnchor} />
             </ErrorBoundary>
 
             {/* Login Modal */}
-            <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
+            <LoginModal isOpen={loginModalOpen} anchorRect={loginAnchor} onClose={() => { setLoginModalOpen(false); setLoginAnchor(null); }} />
 
             {/* Main Content */}
             <motion.main
