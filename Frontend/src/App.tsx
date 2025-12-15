@@ -7,6 +7,7 @@ import ThreeDot from './components/threeDot'
 import Protected from './components/Protected'
 import Register from './pages/auth/register/Register'
 import SearchPage from './pages/search/SearchPage'
+import Help from './pages/Help'
 const Profile = lazy(() => import('./pages/Profile'))
 const CategoryPage = lazy(() => import('./pages/category/CategoryPage'))
 const ProductDetail = lazy(() => import('./pages/Products/ProductDetail'))
@@ -32,7 +33,8 @@ function App() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/category/:categorySlug" element={<CategoryPage />} />
           <Route path="/product/:id" element={<ProductDetail />} />
-          <Route path="/cart" element={<Protected allow={['customer']}><Cart /></Protected>} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/cart" element={<Cart />} />
           <Route path='/profile' element={<Protected allow={['customer', 'seller', 'admin']}><Profile /></Protected>} />
           <Route path="/checkout" element={<Protected allow={['customer']}><Checkout /></Protected>} />
           <Route path="/orders" element={<Protected allow={['customer']}><OrderHistory /></Protected>} />

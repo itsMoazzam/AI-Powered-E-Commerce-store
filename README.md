@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# AI-Powered-E-Commerce-store
-=======
 # 🛍️ E-Commerce Store (React + Vite + TypeScript)
 
 🚀 **3D Models** • ⚙️ **AI Features** • 🛒 **Full Cart & Auth** • 🔥 **Modern UI**

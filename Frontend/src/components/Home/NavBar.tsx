@@ -1,13 +1,12 @@
 import { useEffect, useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, Star } from "lucide-react";
-import { FaShoppingCart, FaSearch, FaHeart, FaHome, FaCat } from "react-icons/fa";
+import { FaShoppingCart, FaSearch, FaHeart, FaHome, FaCat, FaSun, FaMoon } from "react-icons/fa";
 import CartDrawer from "./Cart";
 import { useTheme } from '../../theme/ThemeProvider'
 import api from "../../lib/api";
 import { loadCartFromStorage, getCartStorageKey } from '../../lib/cart'
 import { RiCustomerService2Fill } from "react-icons/ri";
-import { FaToggleOff } from "react-icons/fa6";
 
 type Category = {
     id: number;
@@ -26,9 +25,10 @@ interface NavBarProps {
     setLoginModalOpen: (open: boolean) => void;
     // whether login modal is currently open (optional)
     loginModalOpen?: boolean;
+    setLoginAnchor?: (r: { top: number; left: number; bottom: number; right: number; width: number; height: number } | null) => void;
 }
 
-export default function NavBar({ setLoginModalOpen }: NavBarProps) {
+export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProps) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [categories, setCategories] = useState<Category[]>([]);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -47,7 +47,8 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
     const [hoverPath, setHoverPath] = useState<number[]>([]);
     const menuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
     const userMenuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const { toggle, setPrimary, setText, setBg, setSurface, setTheme } = useTheme();
+    const { theme, toggle, setPrimary, setText, setBg, setSurface, setTheme } = useTheme();
+    const navigate = useNavigate();
     const [localCartCount, setLocalCartCount] = useState<number>(0)
     const [localWishlistCount, setLocalWishlistCount] = useState<number>(0)
     const [notificationsOpen, setNotificationsOpen] = useState(false)
@@ -68,13 +69,14 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
     useEffect(() => {
         let isMounted = true;
         setLoading(true);
-        api.get("/api/products/categories/")
-            .then((res) => {
-                if (isMounted) setCategories(res.data)
+        // Use fetch here (no auth header) so guests don't get redirected by api interceptor on 401
+        fetch('/api/products/categories/')
+            .then(async (res) => {
+                if (!res.ok) throw res
+                const data = await res.json()
+                if (isMounted) setCategories(data)
             })
-            .catch((err) => {
-                if (isMounted) console.error(err)
-            })
+            .catch((err) => { if (isMounted) console.error(err) })
             .finally(() => { if (isMounted) setLoading(false) })
 
         try {
@@ -111,13 +113,26 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
                 // cart count from local storage (per-user)
                 try {
                     const cart = loadCartFromStorage()
-                    if (isMounted) setLocalCartCount(Array.isArray(cart.items) ? cart.items.length : 0)
+                    if (isMounted) {
+                        // only show counts for logged-in customers
+                        const raw = localStorage.getItem('user')
+                        const parsed = raw ? JSON.parse(raw) : null
+                        const role = parsed?.role || localStorage.getItem('role')
+                        if (parsed && role === 'customer') setLocalCartCount(Array.isArray(cart.items) ? cart.items.length : 0)
+                        else setLocalCartCount(0)
+                    }
                 } catch (e) {
                     // fallback to legacy key
                     const cartRaw = localStorage.getItem('intelligentCommerce_cart')
                     const cartObj = cartRaw ? JSON.parse(cartRaw) : null
                     const cartCount = Array.isArray(cartObj?.items) ? cartObj.items.length : 0
-                    if (isMounted) setLocalCartCount(cartCount)
+                    if (isMounted) {
+                        const raw = localStorage.getItem('user')
+                        const parsed = raw ? JSON.parse(raw) : null
+                        const role = parsed?.role || localStorage.getItem('role')
+                        if (parsed && role === 'customer') setLocalCartCount(cartCount)
+                        else setLocalCartCount(0)
+                    }
                 }
 
                 // wishlist - use getWishlist which handles server/local fallback
@@ -143,8 +158,29 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
                 // Any per-user cart key change should update the badge. We detect keys that start with the prefix.
                 if (typeof e.key === 'string' && e.key.indexOf('intelligentCommerce_cart') === 0) {
                     try {
+                        const raw = localStorage.getItem('user')
+                        const parsed = raw ? JSON.parse(raw) : null
+                        const role = parsed?.role || localStorage.getItem('role')
+                        if (!(parsed && role === 'customer')) return
                         const cObj = e.newValue ? JSON.parse(e.newValue) : null
                         setLocalCartCount(Array.isArray(cObj?.items) ? cObj.items.length : 0)
+                    } catch { }
+                }
+                // If user login state changed in another tab, update local user and counts
+                if (e.key === 'user') {
+                    try {
+                        const newUser = e.newValue ? JSON.parse(e.newValue) : null
+                        if (newUser) {
+                            let role: User['role'] = 'customer'
+                            if (newUser.role && (newUser.role === 'admin' || newUser.role === 'seller' || newUser.role === 'customer')) role = newUser.role
+                            else if (newUser.is_superuser || newUser.is_staff || newUser.is_admin) role = 'admin'
+                            else if (newUser.is_seller) role = 'seller'
+                            setUser({ username: newUser.username || newUser.email || 'User', avatar: newUser.profile_photo || '', role })
+                        } else {
+                            setUser(null)
+                            setLocalCartCount(0)
+                            setLocalWishlistCount(0)
+                        }
                     } catch { }
                 }
             } catch (e) { /* ignore */ }
@@ -160,6 +196,14 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
             try {
                 const detail: any = (ev as CustomEvent).detail
                 const count = Array.isArray(detail?.items) ? detail.items.length : (detail?.length ?? 0)
+                // only update badge for authenticated customers
+                try {
+                    const raw = localStorage.getItem('user')
+                    const parsed = raw ? JSON.parse(raw) : null
+                    const role = parsed?.role || localStorage.getItem('role')
+                    if (!(parsed && role === 'customer')) return
+                } catch (e) { return }
+
                 if (detail?.items) setLocalCartCount(count)
                 else if (typeof detail === 'number') setLocalCartCount(detail)
                 else {
@@ -195,12 +239,23 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
         }
     }, [])
 
-    // Load notifications
+    // Load notifications (only for logged-in users)
     useEffect(() => {
         let isMounted = true;
         (async () => {
             try {
-                const { data } = await api.get('/api/notifications/?limit=5')
+                if (!user) {
+                    if (isMounted) setNotifications([])
+                    return
+                }
+                // fetch notifications without axios to avoid auth redirect for guests
+                const nres = await fetch('/api/notifications/?limit=5')
+                if (!nres.ok) {
+                    // quietly ignore expected auth/404 responses
+                    if (isMounted) setNotifications([])
+                    return
+                }
+                const data = await nres.json()
                 if (isMounted) setNotifications(Array.isArray(data) ? data : [])
             } catch (err) {
                 // Backend may not have notifications endpoint; set empty array
@@ -208,7 +263,7 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
             }
         })()
         return () => { isMounted = false; }
-    }, [])
+    }, [user])
 
     const handleCartToggle = () => setCartOpen(!cartOpen);
 
@@ -250,7 +305,9 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
         setTopOpen((s) => !s)
         if (!topSeller) {
             try {
-                const { data } = await api.get('/api/sellers/top/')
+                const tres = await fetch('/api/sellers/top/')
+                if (!tres.ok) throw tres
+                const data = await tres.json()
                 setTopSeller(data)
             } catch (err) {
                 setTopSeller({ name: 'Top Seller', rating: 4.9 })
@@ -324,7 +381,7 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
     return (
         <>
             {/* Top utility bar: shows extra links and quick icons (especially for customers) */}
-            <div className="w-full text-sm" style={{ background: '#FFF7ED', color: 'var(--text)' }}>
+            <div className="w-full text-sm hidden md:block" style={{ background: '#dbf5fdff', color: 'var(--text)' }}>
                 <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-10 flex items-center justify-between h-10">
                     <div className="flex items-center gap-3">
                     </div>
@@ -342,7 +399,7 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
                                 <Star size={20} />
                             </button>
                             {topOpen && (
-                                <div className="absolute right-0 top-full mt-2 w-56 border border-card rounded-md shadow-lg p-3 z-50" style={{ background: 'var(--surface)' }}>
+                                <div className="absolute right-0 top-full mt-2 w-56 border border-card rounded-md shadow-lg p-3" style={{ background: 'var(--surface)', zIndex: 9999 }}>
                                     <div className="text-xs font-medium mb-2 text-muted">TOP SELLER</div>
                                     <div className="text-sm text-default">{topSeller ? `${topSeller.name} — ${topSeller.rating}★` : 'Loading...'}</div>
                                 </div>
@@ -371,7 +428,7 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
                                 {notifications.length > 0 && <span className="notif-badge absolute -top-1 -right-1">{notifications.length}</span>}
                             </button>
                             {notificationsOpen && (
-                                <div className="absolute right-0 mt-2 w-80 bg-surface border border-card rounded-md shadow-lg p-2 z-50">
+                                <div className="absolute right-0 mt-2 w-80 bg-surface border border-card rounded-md shadow-lg p-2" style={{ zIndex: 9999 }}>
                                     <div className="text-sm font-medium mb-2 text-default">Notifications</div>
                                     <div className="space-y-2 max-h-60 overflow-auto">
                                         {notifications.length === 0 && <div className="text-xs text-muted py-3 text-center">No notifications</div>}
@@ -391,7 +448,11 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
 
                         {!user ? (
                             <>
-                                <button onClick={() => setLoginModalOpen(true)} className="text-sm hidden sm:inline">Sign In</button>
+                                <button onClick={(e) => {
+                                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                                    setLoginAnchor && setLoginAnchor({ top: rect.top, left: rect.left, bottom: rect.bottom, right: rect.right, width: rect.width, height: rect.height })
+                                    setLoginModalOpen(true)
+                                }} className="text-sm hidden sm:inline">Sign In</button>
                                 <Link to="/auth/register" className="text-sm hidden sm:inline">Sign Up</Link>
                             </>
                         ) : (
@@ -416,9 +477,10 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
 
                                 {userMenuOpen && (
                                     <div
-                                        className="absolute right-0 mt-2 w-40 bg-surface text-default border border-card rounded-md shadow-md py-2 z-100"
+                                        className="absolute right-0 mt-2 w-40 bg-surface text-default border border-card rounded-md shadow-md py-2"
                                         onMouseEnter={clearUserMenuTimeout}
                                         onMouseLeave={() => delayedCloseUserMenu(1000)}
+                                        style={{ zIndex: 9999 }}
                                     >
                                         <Link
                                             to="/profile"
@@ -442,7 +504,14 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
                                         <div className="px-3 py-2">
                                             <div className="text-xs text-muted mb-2">Theme</div>
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => { toggle(); setUserMenuOpen(false); }} className="px-2 py-1 text-sm rounded border border-card"><FaToggleOff />
+                                                <button
+                                                    onClick={() => { toggle(); setUserMenuOpen(false); }}
+                                                    aria-label="Toggle theme"
+                                                    className="relative inline-flex items-center h-6 w-11 rounded-full transition-colors focus:outline-none"
+                                                    style={{ background: theme === 'dark' ? 'var(--color-primary)' : '#e5e7eb' }}
+                                                >
+                                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${theme === 'dark' ? 'translate-x-5' : 'translate-x-1'}`} />
+                                                    <span className="absolute -right-6 text-xs" aria-hidden>{theme === 'dark' ? <FaMoon /> : <FaSun />}</span>
                                                 </button>
                                                 {themePresets.map((p) => (
                                                     <button key={p.name} onClick={() => { applyPreset(p); setUserMenuOpen(false); }} className="w-6 h-6 rounded border" style={{ background: p.primary }} aria-label={`Apply ${p.name}`} />
@@ -458,8 +527,8 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
                 </div>
             </div>
 
-            <nav className="border-b sticky top-0 z-50 w-full border-theme transition-all duration-300" style={{ background: '#FFF7ED', color: 'var(--text)' }}>
-                <div className="w-full px-2 sm:px-4 md:px-6 lg:px-10 flex items-center justify-between h-14 sm:h-16 gap-1 sm:gap-2 nav-gradient">
+            <nav className="border-b sticky top-0 z-50 w-full border-theme transition-all duration-300" >
+                <div className="w-full px-2 sm:px-4 md:px-6 lg:px-10 flex items-center justify-between h-14 sm:h-16 gap-1 sm:gap-2 pb-5 nav-gradient" style={{ background: '#dbf5fdff', color: 'var(--text)' }}>
 
                     {/* Mobile: Hamburger */}
                     <button
@@ -471,20 +540,7 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
                         {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                     </button>
 
-                    {/* Left side: Logo + Categories (Desktop Only) */}
-                    <div className="hidden md:flex items-center gap-1 sm:gap-1">
-                        <Link to="/" className="flex items-center gap-3 text-2xl sm:text-3xl font-extrabold text-default flex-shrink-0">
-                            <img
-                                src="https://i.ibb.co/NnSYYC6d/Gemini-Generated-Image-6xewhm6xewhm6xew-1.png"
-                                alt="logo"
-                                className="rounded-full logo-spin w-10 h-10 sm:w-12 sm:h-12"
-                            />
-                            <span className="hidden sm:flex items-center ">
 
-                                <p style={{ color: '#3b82f6' }}>IES</p>
-                            </span>
-                        </Link>
-                    </div>
 
                     {/* Mobile: Logo (center when no hamburger) */}
                     <Link to="/" className="md:hidden flex items-center gap-1 text-lg font-extrabold text-default">
@@ -494,103 +550,155 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
                             className="rounded-full logo-spin w-7 h-7"
                         />
                         <span className="flex items-center gap-0.5">
-                            <b className="text-red-500 text-sm">I</b>
-                            <b className="text-green-500 text-sm">E</b>
-                            <b className="text-blue-500 text-sm">S</b>
+                            <p style={{ color: '#3b82f6' }} title="Intelligent Ecommerce Store">IES</p>
+
                         </span>
                     </Link>
 
                     {/* Desktop Search bar (centered) */}
-                    <form
-                        onSubmit={handleSearch}
-                        className="hidden lg:flex flex-1 flex items-center max-w-xl mx-2 rounded-full px-3 py-2 border border-card relative"
-                        style={{ background: 'var(--bg)' }}
+                    <div className=" lg:flex flex-1 flex items-center max-w-full  rounded-full px-3 py-2"
                     >
-                        <input
-                            type="text"
-                            placeholder="Search products..."
-                            value={searchQuery}
-                            onChange={(e) => {
-                                const q = e.target.value
-                                setSearchQuery(q)
-                                // Debounce suggestions
-                                if (suggestionTimer.current) clearTimeout(suggestionTimer.current)
-                                suggestionTimer.current = setTimeout(async () => {
-                                    try {
-                                        if (!q || q.trim() === '') {
+                        <div className="hidden md:flex items-center gap-1 sm:gap-1 mx-9">
+                            <Link to="/" className="flex items-center gap-2 text-2xl sm:text-3xl font-extrabold text-default flex-shrink-0">
+                                <img
+                                    src="https://i.ibb.co/NnSYYC6d/Gemini-Generated-Image-6xewhm6xewhm6xew-1.png"
+                                    alt="logo"
+                                    className="rounded-full logo-spin w-10 h-10 sm:w-12 sm:h-12"
+                                />
+                                <span className="hidden sm:flex items-center ">
+
+                                    <p style={{ color: '#3b82f6' }} title="Intelligent Ecommerce Store">IES</p>
+                                </span>
+                            </Link>
+                        </div>
+                        <form
+                            onSubmit={handleSearch}
+                            className="hidden lg:flex w-[60%] items-center mx-2 rounded-full px-3 py-2 border border-card relative"
+                            style={{ background: 'var(--bg)' }}
+                        >
+                            <input
+                                type="text"
+                                placeholder="Search products..."
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    const q = e.target.value
+                                    setSearchQuery(q)
+                                    // Debounce/throttle suggestions to 2s
+                                    if (suggestionTimer.current) clearTimeout(suggestionTimer.current)
+                                    suggestionTimer.current = setTimeout(async () => {
+                                        try {
+                                            if (!q || q.trim() === '') {
+                                                setSuggestions([])
+                                                return
+                                            }
+                                            // Use fetch for suggestions to avoid triggering axios auth redirect for guests
+                                            const sres = await fetch(`/api/products/?search_text=${encodeURIComponent(q)}&page_size=12`)
+                                            if (!sres.ok) throw sres
+                                            const sdata = await sres.json()
+                                            const list = sdata?.results ?? sdata ?? []
+
+                                            // Build phrase suggestions from titles, descriptions and categories
+                                            const phrases: string[] = []
+                                            for (const p of (Array.isArray(list) ? list : [])) {
+                                                if (p.title) phrases.push(String(p.title))
+                                                if (p.description) {
+                                                    const first = String(p.description).split(/[.?!]\s/)[0]
+                                                    if (first) phrases.push(first)
+                                                }
+                                                if (p.category) {
+                                                    if (typeof p.category === 'string') phrases.push(p.category)
+                                                    else if (p.category?.name) phrases.push(String(p.category.name))
+                                                }
+                                                if (p.categories && Array.isArray(p.categories)) {
+                                                    for (const c of p.categories) {
+                                                        if (!c) continue
+                                                        if (typeof c === 'string') phrases.push(c)
+                                                        else if (c.name) phrases.push(String(c.name))
+                                                    }
+                                                }
+                                                if (p.title) {
+                                                    for (const w of String(p.title).split(/\s+/)) {
+                                                        if (w.length > 2) phrases.push(w)
+                                                    }
+                                                }
+                                            }
+
+                                            const freq = new Map<string, number>()
+                                            phrases.forEach(ph => {
+                                                const normalized = ph.trim()
+                                                if (!normalized) return
+                                                freq.set(normalized, (freq.get(normalized) ?? 0) + 1)
+                                            })
+                                            const sorted = Array.from(freq.entries()).sort((a, b) => b[1] - a[1]).map(([k]) => k).slice(0, 12)
+                                            setSuggestions(sorted)
+                                            setShowSuggestions(true)
+                                        } catch (err) {
                                             setSuggestions([])
-                                            return
                                         }
-                                        const { data } = await api.get('/api/products/', { params: { search_text: q, page_size: 6 } })
-                                        const list = data?.results ?? data ?? []
-                                        setSuggestions(Array.isArray(list) ? list.slice(0, 6) : [])
-                                        setShowSuggestions(true)
-                                    } catch (err) {
-                                        setSuggestions([])
+                                    }, 2000)
+                                }}
+                                onFocus={() => setShowSuggestions(true)}
+                                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                                className="flex-1 bg-transparent outline-none text-md px-3 placeholder-gray-500"
+                                style={{ color: 'var(--text)' }}
+                            />
+
+                            <button
+                                type="submit"
+                                className="p-3 rounded-full cursor-pointer transition hover:scale-110"
+                                style={{ color: 'var(--color-primary-text)', background: 'var(--color-primary)' }}
+                                aria-label="Search"
+                                title="Search"
+                            >
+                                <FaSearch size={16} />
+                            </button>
+
+                            {/* Suggestions dropdown (phrases) */}
+                            {showSuggestions && suggestions.length > 0 && (
+                                <div className="absolute left-0 right-0 mt-14 max-h-64 overflow-auto bg-surface border border-card rounded shadow-lg" style={{ zIndex: 9999 }}>
+                                    <ul>
+                                        {suggestions.map((s: any, i: number) => (
+                                            <li key={`sug-${i}`} className="px-3 py-2 hover:bg-black/5">
+                                                <button className="w-full text-left" onClick={() => { setSearchQuery(s); window.location.href = `/search?query=${encodeURIComponent(s)}`; }}>{s}</button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                        </form>
+
+                        {/* On large screens: show Dashboard for seller/admin; Cart for customers or guests */}
+                        {user && user.role !== 'customer' ? (
+                            <Link
+                                to={user.role === 'seller' ? '/seller' : '/admin'}
+                                className="hidden lg:inline-flex p-2 rounded-md relative ml-2"
+                                style={{ color: 'var(--color-primary)' }}
+                                aria-label="Dashboard"
+                                title="Dashboard"
+                            >
+                                <FaHome size={26} />
+                            </Link>
+                        ) : (
+                            <button
+                                onClick={() => {
+                                    // customers can open the drawer; guests are redirected to login
+                                    if (user?.role === 'customer') {
+                                        setCartOpen(true)
+                                    } else {
+                                        navigate('/auth/login')
                                     }
-                                }, 300)
-                            }}
-                            onFocus={() => setShowSuggestions(true)}
-                            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                            className="flex-1 bg-transparent outline-none text-md px-3 placeholder-gray-500"
-                            style={{ color: 'var(--text)' }}
-                        />
-
-                        <button
-                            type="submit"
-                            className="p-3 rounded-full cursor-pointer transition hover:scale-110"
-                            style={{ color: 'var(--color-primary-text)', background: 'var(--color-primary)' }}
-                            aria-label="Search"
-                            title="Search"
-                        >
-                            <FaSearch size={16} />
-                        </button>
-
-                        {/* Suggestions dropdown */}
-                        {showSuggestions && suggestions.length > 0 && (
-                            <div className="absolute left-0 right-0 mt-14 max-h-64 overflow-auto bg-surface border border-card rounded shadow-lg z-50">
-                                <ul>
-                                    {suggestions.map((s: any) => (
-                                        <li key={`sug-${s.id ?? s.title}`} className="px-3 py-2 hover:bg-black/5">
-                                            <a href={`/product/${s.id}`} className="flex items-center gap-3">
-                                                <img src={s.thumbnail || '/placeholder.png'} alt={s.title} className="w-10 h-10 object-cover rounded" />
-                                                <div className="truncate">
-                                                    <div className="text-sm font-medium">{s.title}</div>
-                                                    <div className="text-xs text-muted">${Number(s.price ?? 0).toFixed(2)}</div>
-                                                </div>
-                                            </a>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
+                                }}
+                                className="hidden lg:inline-flex p-2 rounded-md relative ml-5"
+                                style={{ color: 'var(--color-primary)' }}
+                                aria-label="Cart"
+                                title="Cart"
+                            >
+                                <FaShoppingCart size={26} />
+                                {user && user.role === 'customer' && localCartCount > 0 && <span className="notif-badge absolute -top-2 -right-2">{localCartCount}</span>}
+                            </button>
                         )}
-
-                    </form>
-
-                    {/* On large screens: show Dashboard for seller/admin; Cart for customers or guests */}
-                    {user && user.role !== 'customer' ? (
-                        <Link
-                            to={user.role === 'seller' ? '/seller' : '/admin'}
-                            className="hidden lg:inline-flex p-2 rounded-md relative ml-2"
-                            style={{ color: 'var(--color-primary)' }}
-                            aria-label="Dashboard"
-                            title="Dashboard"
-                        >
-                            <FaHome size={20} />
-                        </Link>
-                    ) : (
-                        <button
-                            onClick={() => setCartOpen(true)}
-                            className="hidden lg:inline-flex p-2 rounded-md relative ml-2"
-                            style={{ color: 'var(--color-primary)' }}
-                            aria-label="Cart"
-                            title="Cart"
-                        >
-                            <FaShoppingCart size={20} />
-                            {localCartCount > 0 && <span className="notif-badge absolute -top-2 -right-2">{localCartCount}</span>}
-                        </button>
-                    )}
-
+                    </div>
                     {/* Right side - Icons & Auth (keeps compact functions: profile, menu) */}
                     <div className="flex items-center gap-1 sm:gap-2">
 
@@ -653,23 +761,24 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
             {/* Mobile Menu Sidebar */}
             {mobileMenuOpen && (
                 <div className="md:hidden fixed inset-0 top-14 sm:top-16 z-40 overflow-hidden">
-                    <div
-                        className="absolute inset-0"
-                        onClick={() => setMobileMenuOpen(false)}
-                    />
-                    <div
-                        className="absolute left-0 top-0 bottom-0 w-64 sm:w-72 border-r border-card shadow-lg overflow-y-auto"
-                        style={{ background: 'var(--surface)' }}
-                    >
+                    <div className="absolute inset-0" onClick={() => setMobileMenuOpen(false)} />
+
+                    <div className="absolute left-0 top-0 bottom-0 w-64 sm:w-72 border-r border-card shadow-lg overflow-y-auto" style={{ background: 'var(--surface)' }}>
                         {/* Mobile Menu Content */}
                         <div className="p-4 space-y-2">
-                            {/* Categories */}
-                            {/* Simplified mobile links (categories removed from navbar) */}
                             <div>
                                 <Link to="/" className="block px-3 py-2 rounded hover:bg-black/5 text-sm text-default" onClick={() => setMobileMenuOpen(false)}>Home</Link>
                                 <Link to="/categories" className="block px-3 py-2 rounded hover:bg-black/5 text-sm text-default" onClick={() => setMobileMenuOpen(false)}>Categories</Link>
-                                {(user?.role === 'customer' || !user) && <Link to="/wishlist" className="block px-3 py-2 rounded hover:bg-black/5 text-sm text-default" onClick={() => setMobileMenuOpen(false)}>Wishlist {localWishlistCount > 0 && `(${localWishlistCount})`}</Link>}
-                                <Link to="/cart" className="block px-3 py-2 rounded hover:bg-black/5 text-sm text-default" onClick={() => setMobileMenuOpen(false)}>Cart</Link>
+                                {(user?.role === 'customer' || !user) && (
+                                    <Link to="/wishlist" className="block px-3 py-2 rounded hover:bg-black/5 text-sm text-default" onClick={() => setMobileMenuOpen(false)}>Wishlist {localWishlistCount > 0 && `(${localWishlistCount})`}</Link>
+                                )}
+
+                                {user?.role === 'customer' ? (
+                                    <Link to="/cart" className="block px-3 py-2 rounded hover:bg-black/5 text-sm text-default" onClick={() => setMobileMenuOpen(false)}>Cart</Link>
+                                ) : (
+                                    <button onClick={() => { navigate('/auth/login'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 rounded hover:bg-black/5 text-sm text-default">Cart</button>
+                                )}
+
                                 <Link to="/help" className="block px-3 py-2 rounded hover:bg-black/5 text-sm text-default" onClick={() => setMobileMenuOpen(false)}>Help & Support</Link>
                             </div>
 
@@ -725,7 +834,7 @@ export default function NavBar({ setLoginModalOpen }: NavBarProps) {
                                 </>
                             ) : (
                                 <>
-                                    <button onClick={() => { setLoginModalOpen(true); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 rounded hover:bg-black/5 text-sm text-default">Login</button>
+                                    <button onClick={() => { setLoginAnchor && setLoginAnchor(null); setLoginModalOpen(true); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 rounded hover:bg-black/5 text-sm text-default">Login</button>
                                     <Link to="/auth/register" className="block px-3 py-2 rounded hover:bg-black/5 text-sm text-default" onClick={() => setMobileMenuOpen(false)}>Sign Up</Link>
                                 </>
                             )}

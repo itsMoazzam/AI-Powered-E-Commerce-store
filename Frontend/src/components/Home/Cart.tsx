@@ -9,6 +9,23 @@ export default function CartDrawer({ open, setOpen }: { open: boolean; setOpen: 
     const [cartItems, setCartItems] = useState<any[]>([]);
     const navigate = useNavigate();
 
+    // If a non-customer somehow opens the drawer, redirect to login and close
+    useEffect(() => {
+        if (!open) return
+        try {
+            const raw = localStorage.getItem('user')
+            const parsed = raw ? JSON.parse(raw) : null
+            const role = parsed?.role || localStorage.getItem('role')
+            if (!(parsed && role === 'customer')) {
+                setOpen(false)
+                navigate('/auth/login')
+            }
+        } catch (e) {
+            setOpen(false)
+            navigate('/auth/login')
+        }
+    }, [open])
+
     useEffect(() => {
         if (open) {
             // Load cart from localStorage when drawer opens

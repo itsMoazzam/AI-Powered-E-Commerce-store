@@ -46,9 +46,9 @@ export default function SellerSidebar({ view, setView, productCount }: SellerSid
 
             {/* --- Sidebar --- */}
             <aside
-                className={`fixed lg:static top-12 left-0 h-[calc(100vh-3rem)] lg:h-auto bg-surface border-r border-card flex flex-col w-72 lg:w-80 transform transition-transform duration-300 ${open ? "translate-x-0 z-40" : "-translate-x-full lg:translate-x-0"
-                    } p-4 lg:p-6 overflow-y-auto`}
-                style={{ background: 'var(--surface)', color: 'var(--text)' }}
+                className={`fixed lg:sticky top-12 left-0 h-[calc(100vh-3rem)] lg:h-[calc(100vh-5rem)] bg-surface border-r border-card flex flex-col w-72 lg:w-80 transform transition-transform duration-300 ${open ? "translate-x-0 z-40" : "-translate-x-full lg:translate-x-0"
+                    } p-4 lg:p-6 overflow-y-auto-hide-scroll`}
+                style={{ background: 'var(--surface)', color: 'var(--text)', zIndex: 40 }}
             >
                 {/* Header - Desktop only */}
                 <div className="mb-6 hidden lg:block">

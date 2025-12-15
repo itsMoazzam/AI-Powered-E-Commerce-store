@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useState, useEffect } from "react"
 import api from "../../lib/api"
 import { useTheme } from "../../theme/ThemeProvider"
+import ThreeDot from "../threeDot"
 
 interface Advertisement {
     id: number
@@ -87,16 +88,16 @@ export default function HeroBanner() {
 
     if (loading) {
         return (
-            <div className="relative w-full h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[80vh] rounded-2xl sm:rounded-3xl overflow-hidden" style={{ background: 'var(--surface)' }}>
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center text-muted">Loading banners...</div>
-                </div>
-            </div>
+            // <div className="relative w-full h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[80vh] rounded-2xl sm:rounded-3xl overflow-hidden" style={{ background: 'var(--surface)' }}>
+            //     <div className="absolute inset-0 flex items-center justify-center">
+            <div><ThreeDot /></div>
+            //     </div>
+            // </div>
         )
     }
 
     return (
-        <div className="relative w-full h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[80vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-lg">
+        <div className="relative w-full h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[80vh] overflow-hidden    shadow-lg">
             {slides.map((slide, index) => (
                 <div
                     key={`slide-${slide.id ?? index}-${index}`}

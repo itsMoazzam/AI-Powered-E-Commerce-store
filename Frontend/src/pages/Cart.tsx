@@ -10,18 +10,21 @@ export default function Cart() {
 
     // Load cart from localStorage on mount
     useEffect(() => {
-        const savedCart = loadCartFromStorage()
-        setCart(savedCart)
-        // read user info to show per-user label
+        // Only load a per-user cart for authenticated customers. Guests see empty cart.
         try {
             const raw = localStorage.getItem('user')
-            if (raw) {
-                const parsed = JSON.parse(raw)
+            const parsed = raw ? JSON.parse(raw) : null
+            const role = parsed?.role || localStorage.getItem('role')
+            if (parsed && role === 'customer') {
+                const savedCart = loadCartFromStorage()
+                setCart(savedCart)
                 setOwnerLabel(parsed?.username ?? parsed?.email ?? `user:${parsed?.id ?? 'unknown'}`)
             } else {
+                setCart({ items: [], total: 0, shipping: 0, grand_total: 0 })
                 setOwnerLabel('guest')
             }
         } catch (e) {
+            setCart({ items: [], total: 0, shipping: 0, grand_total: 0 })
             setOwnerLabel('guest')
         }
         setLoading(false)

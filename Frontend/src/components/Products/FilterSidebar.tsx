@@ -90,9 +90,8 @@ export default function FilterSidebar({ onFilterChange }: FilterProps) {
 
       {/* Sidebar */}
       <div
-        className={`fixed md:static inset-y-0 left-0 transform ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-          } md:translate-x-0 transition-transform duration-300 ease-in-out z-50 w-72 p-4 border-r overflow-y-auto max-h-screen`}
-        style={{ background: 'var(--surface)', color: 'var(--text)' }}
+        className={`fixed md:sticky inset-y-0 left-0 transform ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-50 md:z-40 w-72 p-4 border-r overflow-y-auto-hide-scroll md:max-h-[calc(100vh-5rem)]`}
+        style={{ background: 'var(--surface)', color: 'var(--text)', top: '4rem' }}
       >
         {/* Mobile Close Button */}
         <div className="flex justify-between items-center mb-4 md:hidden">

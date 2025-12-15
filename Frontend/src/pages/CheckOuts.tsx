@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react"
 import api from "../lib/api"
-import { savePendingOrder, confirmOrderToBackend } from '../lib/checkout'
+import { useNavigate } from 'react-router-dom'
+import { savePendingOrder, confirmOrderToBackend, saveOrderHistoryEntry, removePendingOrder } from '../lib/checkout'
+import { clearCart, loadCartFromStorage } from '../lib/cart'
 import { Loader2, CreditCard, ShoppingBag } from "lucide-react"
 import ReceiptUpload from "../components/ReceiptUpload"
 import { printInvoice } from "../lib/invoice"
@@ -18,6 +20,7 @@ type Address = {
 }
 
 export default function Checkout() {
+    const navigate = useNavigate()
     const [step, setStep] = useState(1)
     const [loading, setLoading] = useState(false)
     const [address, setAddress] = useState<Address>({})
@@ -37,6 +40,22 @@ export default function Checkout() {
     const total = subtotal + shippingFee + tax - discount
 
     async function placeOrder() {
+        // Require customer login to place orders
+        try {
+            const raw = localStorage.getItem('user')
+            const parsed = raw ? JSON.parse(raw) : null
+            const role = parsed?.role || localStorage.getItem('role')
+            if (!parsed || role !== 'customer') {
+                alert('Please sign in as a customer to place orders.')
+                navigate('/auth/login')
+                return
+            }
+        } catch (e) {
+            alert('Please sign in to continue.')
+            navigate('/auth/login')
+            return
+        }
+
         if (!address.first_name || !address.last_name || !address.line1 || !address.city || !address.postal_code) {
             alert("Please complete all required fields.")
             return
@@ -49,9 +68,20 @@ export default function Checkout() {
 
         setLoading(true)
         try {
+            // If no items were preloaded, fall back to local cart contents (local-first)
+            let payloadItems = items
+            if (!payloadItems || payloadItems.length === 0) {
+                try {
+                    const local = loadCartFromStorage()
+                    payloadItems = (local.items || []).map((it: any) => ({ id: it.productId || it.id, name: it.title, qty: it.qty, price: it.price }))
+                } catch (err) {
+                    payloadItems = []
+                }
+            }
+
             const orderPayload = {
                 shipping_address: address,
-                items,
+                items: payloadItems,
                 delivery_method: deliveryMethod,
                 payment_method: selectedPayment || 'online',
                 payment,
@@ -62,20 +92,37 @@ export default function Checkout() {
             // Save order locally first (per-user localStorage)
             const localId = savePendingOrder(orderPayload as any)
 
+            // Clear the user's local cart immediately after placing an order
+            try {
+                clearCart()
+            } catch (err) {
+                console.warn('Failed to clear cart after placing order', err)
+            }
+
             // Try to notify backend with a single confirmation call. This is allowed to fail.
+            let confirmed = false
             try {
                 await confirmOrderToBackend(localId as number, orderPayload as any)
+                confirmed = true
             } catch (err) {
                 // confirmation failed - keep local copy and continue
                 console.debug('Backend confirmation failed; order stored locally.', err)
             }
 
-            // Also store in orderHistory for user's reference
+            // If backend confirmed order, remove the pending order
             try {
-                const raw = localStorage.getItem('orderHistory')
-                const arr = raw ? JSON.parse(raw) : []
-                arr.unshift({ id: localId || Date.now(), total: total, created_at: new Date().toISOString(), items: orderPayload.items })
-                localStorage.setItem('orderHistory', JSON.stringify(arr))
+                if (confirmed) {
+                    try {
+                        removePendingOrder(localId as number)
+                    } catch (e) { /* ignore */ }
+                }
+            } catch (err) {
+                console.warn('Failed to remove pending order after confirmation', err)
+            }
+
+            // Also store in orderHistory for user's reference (per-user)
+            try {
+                saveOrderHistoryEntry({ id: localId || Date.now(), total: total, created_at: new Date().toISOString(), items: orderPayload.items })
             } catch { }
 
             alert('✅ Order saved and confirmation sent (if available).')

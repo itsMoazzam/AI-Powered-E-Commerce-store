@@ -5,6 +5,7 @@ import { Star } from "lucide-react"
 import api from "../../lib/api"
 import { useDispatch } from 'react-redux'
 import { fetchCart } from '../../store/Cart'
+import { addToCart } from '../../lib/cart'
 
 interface Product {
     id: number
@@ -82,27 +83,22 @@ export default function ProductCard({
                             e.preventDefault()
                             const role = localStorage.getItem('role')
                             if (role !== 'customer') {
-                                alert('Only customers can add items to cart. Please log in as a customer.')
+                                // redirect guests to login
+                                navigate('/auth/login')
                                 return
                             }
                             try {
-                                await api.post('/api/cart/', { product: product.id, qty: 1 })
+                                // Local-first add (only customers allowed)
+                                addToCart({ id: product.id, title: product.title, thumbnail: product.thumbnail, price: Number(product.price), seller: undefined })
                                 try { dispatch(fetchCart() as any) } catch { }
                                 navigate(`/cart?added=${product.id}`)
                             } catch (err: any) {
                                 console.error('Add to cart failed', err)
-                                const status = err?.response?.status
-                                const data = err?.response?.data
-                                if (status === 401) {
-                                    alert('You must be logged in to add items to the cart.')
-                                    window.location.href = '/auth/login'
-                                } else if (status === 403) {
-                                    alert('You do not have permission to add items to the cart.')
-                                } else if (status === 404) {
-                                    alert('Cart service not available (404). Make sure backend is running and the /api/cart/ endpoint exists.')
+                                if (err?.message && err.message.indexOf('logged') >= 0) {
+                                    alert('You must be logged in as a customer to add items to the cart.')
+                                    navigate('/auth/login')
                                 } else {
-                                    const msg = data?.error || data?.detail || data || err.message || 'Failed to add to cart'
-                                    alert(`Add to cart failed: ${msg}`)
+                                    alert(err?.message || 'Failed to add to cart')
                                 }
                             }
                         }}

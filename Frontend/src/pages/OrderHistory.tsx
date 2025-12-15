@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import api from '../lib/api'
 import { printInvoice } from '../lib/invoice'
+import { loadOrderHistory } from '../lib/checkout'
 
 type Order = {
   id: number | string
@@ -16,15 +17,21 @@ export default function OrderHistory() {
 
   useEffect(() => {
     let mounted = true
-    ;(async () => {
-      try {
-        const { data } = await api.get('/api/orders/my/')
-        if (!mounted) return
-        setOrders(Array.isArray(data) ? data : [])
-      } catch (err) {
-        console.error('Failed to load orders', err)
-      }
-    })()
+      ; (async () => {
+        try {
+          const { data } = await api.get('/api/orders/my/')
+          if (!mounted) return
+          const backend = Array.isArray(data) ? data : []
+          const local = loadOrderHistory() || []
+          // Merge local entries (pending or confirmed) before backend list
+          setOrders([...local, ...backend])
+        } catch (err) {
+          console.error('Failed to load orders', err)
+          const local = loadOrderHistory() || []
+          if (!mounted) return
+          setOrders(local)
+        }
+      })()
 
     const base = import.meta.env.VITE_WS_URL || window.location.origin.replace(/^http/, 'ws')
     try {
@@ -46,7 +53,7 @@ export default function OrderHistory() {
       console.warn('Order WS failed to connect', err)
     }
 
-    return () => { mounted = false; try { wsRef.current?.close() } catch {} }
+    return () => { mounted = false; try { wsRef.current?.close() } catch { } }
   }, [])
 
   return (
