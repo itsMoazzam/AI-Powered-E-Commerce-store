@@ -248,8 +248,21 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                     if (isMounted) setNotifications([])
                     return
                 }
-                // fetch notifications without axios to avoid auth redirect for guests
-                const nres = await fetch('/api/notifications/?limit=5')
+
+                // Only attempt to fetch notifications when we have a local token
+                // (this avoids unnecessary 401 responses when user info exists
+                // but no valid auth token is available, such as when using
+                // session cookies that may have expired).
+                const token = localStorage.getItem('token')
+                if (!token) {
+                    if (isMounted) setNotifications([])
+                    return
+                }
+
+                const headers: Record<string, string> = { 'Accept': 'application/json' }
+                if (token) headers['Authorization'] = `Bearer ${token}`
+
+                const nres = await fetch('/api/notifications/?limit=5', { headers })
                 if (!nres.ok) {
                     // quietly ignore expected auth/404 responses
                     if (isMounted) setNotifications([])
@@ -393,7 +406,7 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                             <button
                                 title="Top sellers"
                                 onClick={handleTopClick}
-                                className="p-2 rounded-md hover:bg-black/5 dark:hover:bg-white/5"
+                                className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-black/5 cursor-pointer"
                                 style={{ color: 'var(--color-primary)' }}
                             >
                                 <Star size={20} />
@@ -417,11 +430,11 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                         <div className="hidden lg:block relative">
                             <button
                                 onClick={() => setNotificationsOpen((s) => !s)}
-                                className="p-2 rounded-md hover:bg-black/5 dark:hover:bg-white/5 relative"
+                                className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-black/5 relative cursor-pointer"
                                 style={{ color: 'var(--color-primary)' }}
                                 title="Notifications"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
                                     <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z" />
                                     <path d="M9 18a2 2 0 104 0H9z" />
                                 </svg>
@@ -448,12 +461,8 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
 
                         {!user ? (
                             <>
-                                <button onClick={(e) => {
-                                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                                    setLoginAnchor && setLoginAnchor({ top: rect.top, left: rect.left, bottom: rect.bottom, right: rect.right, width: rect.width, height: rect.height })
-                                    setLoginModalOpen(true)
-                                }} className="text-sm hidden sm:inline">Sign In</button>
-                                <Link to="/auth/register" className="text-sm hidden sm:inline">Sign Up</Link>
+                                <button onClick={() => { setLoginAnchor && setLoginAnchor(null); setLoginModalOpen(true); }} className="text-sm hidden sm:inline inline-flex items-center justify-center cursor-pointer" style={{ color: 'var(--color-primary)' }}>Sign In</button>
+                                <Link to="/register" className="text-sm hidden sm:inline" style={{ color: 'var(--color-primary)' }}>Sign Up</Link>
                             </>
                         ) : (
                             <div className="relative">

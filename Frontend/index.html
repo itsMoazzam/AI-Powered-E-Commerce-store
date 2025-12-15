@@ -15,6 +15,63 @@
 
 <body>
   <div id="root"></div>
+  <!-- Dev-only: early guard for React DevTools hook to avoid semver validation crashes -->
+  <script>
+    (function () {
+      // Run quickly and repeatedly for a short window so we catch hooks injected
+      // before our main app script runs (React DevTools extension sometimes
+      // registers very early).
+      function normalize(hook) {
+        try {
+          if (!hook) return
+          try {
+            const renderers = hook.renderers
+            if (renderers && typeof renderers.forEach === 'function') {
+              renderers.forEach(function (r) {
+                try {
+                  if (r && typeof r.version === 'string' && r.version.trim() === '') r.version = '0.0.0'
+                } catch (e) {}
+              })
+            }
+          } catch (e) {}
+
+          if (typeof hook.inject === 'function') {
+            var origInject = hook.inject.bind(hook)
+            hook.inject = function (renderer) {
+              try {
+                if (renderer && typeof renderer.version === 'string' && renderer.version.trim() === '') renderer.version = '0.0.0'
+              } catch (e) {}
+              return origInject(renderer)
+            }
+          }
+
+          if (typeof hook.registerRendererInterface === 'function') {
+            var origReg = hook.registerRendererInterface.bind(hook)
+            hook.registerRendererInterface = function (ri) {
+              try {
+                if (ri && typeof ri.version === 'string' && ri.version.trim() === '') ri.version = '0.0.0'
+              } catch (e) {}
+              try { return origReg.apply(this, arguments) } catch (err) { console && console.warn && console.warn('Suppressed DevTools registerRendererInterface error:', err); return undefined }
+            }
+          }
+        } catch (err) {
+          // swallow
+        }
+      }
+
+      if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) normalize(window.__REACT_DEVTOOLS_GLOBAL_HOOK__)
+      var attempts = 0
+      var t = setInterval(function () {
+        attempts++
+        if (window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
+          normalize(window.__REACT_DEVTOOLS_GLOBAL_HOOK__)
+          clearInterval(t)
+          return
+        }
+        if (attempts > 30) clearInterval(t)
+      }, 50)
+    })()
+  </script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

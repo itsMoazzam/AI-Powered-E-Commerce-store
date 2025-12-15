@@ -53,7 +53,7 @@ interface Product {
     dimensions?: string
     weight?: string
     warranty?: string
-    category?: string
+    category?: string | string[]
     attributes?: { key: string; value: string }[]
 }
 
@@ -130,8 +130,11 @@ export default function ProductDetailPage() {
         (async () => {
             try {
                 // Prefer category-based related products if available
-                if (product.category) {
-                    const res = await api.get(`/api/products/?category_slug=${encodeURIComponent(String(product.category))}&page_size=8`)
+                const categorySlug =
+                    Array.isArray(product.category) ? product.category[0] : product.category
+
+                if (categorySlug) {
+                    const res = await api.get(`/api/products/?category_slug=${encodeURIComponent(categorySlug)}&page_size=8`)
                     const list = res?.data?.results ?? res?.data ?? []
                     const filtered = Array.isArray(list) ? list.filter((p: any) => Number(p.id) !== Number(product.id)).slice(0, 8) : []
                     if (isMounted) setRelatedProducts(filtered)
@@ -214,8 +217,38 @@ export default function ProductDetailPage() {
         return []
     }
 
-    const attrs = normalizeAttributes(product.attributes)
-    console.log('attrs', attrs)
+    // Normalize attributes from a variety of possible fields returned by the API.
+    // Some backends return `attributes` as JSON-stringified arrays, others use
+    // `specs`, `specifications`, `custom_attributes`, or nested metadata.
+    const attrs = (() => {
+        let a = normalizeAttributes(product.attributes)
+        if (!a || a.length === 0) {
+            // try common alternatives
+            a = normalizeAttributes((product as any).specs || (product as any).specifications || (product as any).custom_attributes || (product as any).custom_attributes_json || (product as any).meta || (product as any).metadata || {})
+        }
+        // Last-resort: if an attributes object keyed by name exists
+        if ((!a || a.length === 0) && (product as any).attributes && typeof (product as any).attributes === 'object') {
+            try {
+                const obj = (product as any).attributes
+                if (!Array.isArray(obj)) {
+                    a = Object.entries(obj).map(([k, v]) => ({ key: k, value: v === null || v === undefined ? '' : String(v) }))
+                }
+            } catch (err) {
+                // ignore
+            }
+        }
+        // For development diagnostics, log raw attribute sources when none found
+        if (import.meta.env.DEV && (!a || a.length === 0)) {
+            // eslint-disable-next-line no-console
+            console.debug('ProductDetail: no attributes found. Raw fields:', {
+                attributes: product.attributes,
+                specs: (product as any).specs || (product as any).specifications,
+                custom: (product as any).custom_attributes || (product as any).custom_attributes_json,
+                metadata: (product as any).meta || (product as any).metadata,
+            })
+        }
+        return a || []
+    })()
 
 
     const handlePrev = () =>

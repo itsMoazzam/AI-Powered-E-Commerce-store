@@ -53,10 +53,10 @@ export default function ProductGrid() {
             setHasMore(Boolean(next))
         } catch (err: any) {
             console.error('Failed to load products', err)
-            // If unauthenticated or forbidden, fall back to demo products so home remains visible
+            // If unauthenticated, forbidden, not-found or client error, fall back to demo products so home remains visible
             const status = err?.response?.status
-            if (status === 401 || status === 403 || !status) {
-                // Use demo products for guests or when API isn't reachable
+            if (status === 401 || status === 403 || status === 404 || status === 400 || !status) {
+                // Use demo products for guests or when API isn't reachable or page is missing
                 const demoSlice = demoProducts.slice((p - 1) * PAGE_SIZE, p * PAGE_SIZE)
                 setProducts((prev) => [...prev, ...demoSlice])
                 setHasMore(false)

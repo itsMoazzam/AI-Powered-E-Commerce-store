@@ -50,17 +50,25 @@ export default function HeroBanner() {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        // Fetch seller advertisements
+        // Fetch seller advertisements publicly (no auth) so all visitors can see seller ads.
         const fetchAds = async () => {
             try {
-                const { data } = await api.get('/api/advertisements/')
+                const res = await fetch('/api/advertisements/')
+                if (!res.ok) throw res
+                const data = await res.json()
                 if (Array.isArray(data) && data.length > 0) {
+                    // Prioritize explicit seller ads so visitors see them first
+                    const sellerAds = data.filter((d: any) => d && d.seller_id)
+                    const otherAds = data.filter((d: any) => !d || !d.seller_id)
+                    const combined = [...sellerAds, ...otherAds]
+
                     // If we have less than 3 ads, combine with default slides
-                    if (data.length < 3) {
-                        const remaining = defaultSlides.slice(0, 3 - data.length)
-                        setSlides([...data, ...remaining])
-                    } else {
-                        setSlides(data.slice(0, 5))
+                    const toUse = combined.length < 3 ? [...combined, ...defaultSlides.slice(0, 3 - combined.length)] : combined.slice(0, 5)
+                    setSlides(toUse)
+
+                    if (import.meta.env.DEV) {
+                        // eslint-disable-next-line no-console
+                        console.debug('HeroBanner: loaded advertisements', { total: data.length, sellerAds: sellerAds.length })
                     }
                 } else {
                     setSlides(defaultSlides)
@@ -127,11 +135,12 @@ export default function HeroBanner() {
                             {slide.cta_text}
                         </Link>
 
-                        {/* Badge for seller ads */}
+                        {/* Badge for seller ads (visible to all visitors); links to seller page if available */}
                         {slide.seller_id && (
-                            <span className="mt-3 w-fit text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white border border-white/30">
-                                🎯 Featured Seller
-                            </span>
+                            <Link to={`/seller/${slide.seller_id}`} className="mt-3 w-fit text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white border border-white/30 inline-flex items-center gap-2" title="View seller">
+                                <span>🎯 Featured Seller</span>
+                                <span className="text-[10px] opacity-80">View</span>
+                            </Link>
                         )}
                     </div>
                 </div>

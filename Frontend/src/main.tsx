@@ -39,8 +39,10 @@ if (typeof window !== 'undefined') {
 // Workaround: Some third-party renderers register with React DevTools without a valid
 // semver `version` string which causes the DevTools backend to throw:
 // "Invalid argument not valid semver ('') received". Patch the global hook's
-// `inject` briefly to normalize empty version strings before any renderer injects.
-if (typeof window !== 'undefined') {
+// `inject` and `registerRendererInterface` briefly to normalize empty version
+// strings and guard against thrown errors so the page doesn't crash during dev.
+// Only apply these devtools guards during development builds
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
   const hook = (window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__
   if (hook && typeof hook.inject === 'function') {
     // Normalize any already-registered renderers (some bundlers/extensions
@@ -72,9 +74,37 @@ if (typeof window !== 'undefined') {
         // swallow any unexpected errors here to avoid breaking app startup
         // and allow original inject to proceed.
         // eslint-disable-next-line no-console
-        console.warn('DevTools hook normalization failed', e)
+        console.warn('DevTools hook normalization failed (inject)', e)
       }
       return originalInject(renderer)
+    }
+
+    // Some DevTools backends call `registerRendererInterface` which may in turn
+    // validate a version string. Wrap it to normalize empty values and to
+    // prevent an uncaught exception from bubbling up to the page.
+    if (typeof hook.registerRendererInterface === 'function') {
+      const origRegister = hook.registerRendererInterface.bind(hook)
+      hook.registerRendererInterface = (rendererInterface: any, ...rest: any[]) => {
+        try {
+          if (rendererInterface && typeof rendererInterface.version === 'string' && rendererInterface.version.trim() === '') {
+            rendererInterface.version = '0.0.0'
+          }
+        } catch (err) {
+          // ignore normalization errors, but don't let them crash the page
+          // eslint-disable-next-line no-console
+          console.warn('DevTools hook normalization failed (registerRendererInterface)', err)
+        }
+        try {
+          return origRegister(rendererInterface, ...rest)
+        } catch (err) {
+          // Guard: if DevTools throws here (e.g., invalid semver), swallow the
+          // error in development so it doesn't break the app. Log a warning for
+          // visibility.
+          // eslint-disable-next-line no-console
+          console.warn('React DevTools registerRendererInterface threw, suppressing in dev:', err)
+          return undefined
+        }
+      }
     }
   }
 }
@@ -92,3 +122,29 @@ createRoot(document.getElementById('root')!).render(
     </Provider>
   </StrictMode>,
 )
+
+// Dev-only: quick backend reachability check to give a helpful console warning
+// when the Vite proxy cannot connect to the backend (helps diagnose
+// `ECONNREFUSED` proxy errors during local development).
+if (import.meta.env.DEV) {
+  ; (async () => {
+    try {
+      const target = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 2000)
+      try {
+        // Probe a lightweight endpoint
+        await fetch('/api/', { method: 'HEAD', signal: controller.signal })
+      } finally {
+        clearTimeout(timeout)
+      }
+    } catch (err) {
+      // Friendly multi-line console guidance
+      // eslint-disable-next-line no-console
+      console.warn('\n[dev] Unable to reach backend through Vite proxy. This usually means the backend is not running or the proxy target is incorrect.\n' +
+        ' - Check your backend is running (default: http://localhost:8000)\n' +
+        ' - Or set VITE_API_BASE_URL in your environment to the correct backend URL\n' +
+        ' - Examples: VITE_API_BASE_URL=http://localhost:8000 or http://127.0.0.1:8000\n')
+    }
+  })()
+}
