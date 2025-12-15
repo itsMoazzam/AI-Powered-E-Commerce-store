@@ -86,23 +86,31 @@ export default function LoginModal({ isOpen, onClose, anchorRect }: LoginModalPr
 
             {/* Modal or anchored popover */}
             <div className="fixed inset-0 z-50 p-4 pointer-events-none">
+                {/* Decorative glows when modal centered (not anchored) */}
+                {!isAnchored && (
+                    <>
+                        <div className="absolute w-72 h-72 bg-blue-600/30 rounded-full blur-3xl top-20 left-8 animate-pulse" />
+                        <div className="absolute w-72 h-72 bg-purple-600/30 rounded-full blur-3xl bottom-20 right-8 animate-pulse delay-300" />
+                    </>
+                )}
+
                 <div style={anchoredStyle} className={`${isAnchored ? 'pointer-events-auto' : 'mx-auto pointer-events-auto'} relative ${isAnchored ? '' : 'w-full max-w-md'}`}>
-                    <div className="relative bg-white rounded-lg shadow-md p-6 text-gray-900 border border-zinc-200 transition" style={{ pointerEvents: 'auto' }}>
+                    <div className="relative z-10 w-full max-w-md bg-gray-800/70 backdrop-blur-xl border border-gray-700 rounded-3xl shadow-2xl p-8 text-white transform transition-all" style={{ pointerEvents: 'auto' }}>
                         {/* Close Button */}
                         <button
                             onClick={onClose}
-                            className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 transition"
+                            className="absolute top-5 right-5 text-gray-400 hover:text-white transition"
                             title="Close"
                         >
-                            <X size={18} />
+                            <X size={22} />
                         </button>
 
                         {/* Header */}
-                        <h2 className="text-xl font-semibold text-center mb-1">
-                            Sign in to your account
+                        <h2 className="text-3xl font-extrabold text-center mb-2 tracking-tight">
+                            Welcome Back 👋
                         </h2>
-                        <p className="text-center text-zinc-500 text-sm mb-6">
-                            Enter your credentials to continue
+                        <p className="text-center text-gray-400 text-sm mb-8">
+                            Sign in to access your dashboard
                         </p>
 
                         {/* Login Form */}
@@ -119,7 +127,7 @@ export default function LoginModal({ isOpen, onClose, anchorRect }: LoginModalPr
                                         onChange={(e) => setUsername(e.target.value)}
                                         placeholder="username"
                                         autoComplete="username"
-                                        className="w-full px-4 py-3 rounded-xl bg-white text-gray-900 placeholder-gray-400 border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                                        className="w-full px-4 py-3 rounded-xl bg-gray-700/70 text-white placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                         required
                                     />
                                 </div>
@@ -136,13 +144,13 @@ export default function LoginModal({ isOpen, onClose, anchorRect }: LoginModalPr
                                             onChange={(e) => setPassword(e.target.value)}
                                             placeholder="••••••••"
                                             autoComplete="current-password"
-                                            className="w-full px-4 py-3 rounded-xl bg-white text-gray-900 placeholder-gray-400 border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                                            className="w-full px-4 py-3 rounded-xl bg-gray-700/70 text-white placeholder-gray-400 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                             required
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-4 top-3 text-gray-400 hover:text-gray-800 transition"
+                                            className="absolute right-4 top-3 text-gray-400 hover:text-white transition"
                                             aria-label={showPassword ? 'Hide password' : 'Show password'}
                                         >
                                             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -203,7 +211,7 @@ export default function LoginModal({ isOpen, onClose, anchorRect }: LoginModalPr
                                         onChange={(e) => setFpEmail(e.target.value)}
                                         placeholder="you@example.com"
                                         autoComplete="email"
-                                        className="w-full px-3 py-2 rounded bg-white border border-zinc-200 text-gray-900"
+                                        className="w-full px-3 py-2 rounded bg-gray-700/60 border border-gray-600 text-white"
                                     />
                                 </div>
                                 <div>
@@ -215,7 +223,7 @@ export default function LoginModal({ isOpen, onClose, anchorRect }: LoginModalPr
                                         onChange={(e) => setFpPhone(e.target.value)}
                                         placeholder="+1234567890"
                                         autoComplete="tel"
-                                        className="w-full px-3 py-2 rounded bg-white border border-zinc-200 text-gray-900"
+                                        className="w-full px-3 py-2 rounded bg-gray-700/60 border border-gray-600 text-white"
                                     />
                                 </div>
 
