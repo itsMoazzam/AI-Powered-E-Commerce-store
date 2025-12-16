@@ -14,7 +14,7 @@ type Props = {
     selectedId?: number | null;
 };
 
-const CategorySelector: React.FC<Props> = ({ onSelect }) => {
+const CategorySelector: React.FC<Props> = ({ onSelect, selectedId }) => {
     const { primary } = useTheme();
     const [categories, setCategories] = useState<Category[]>([]);
     const [parentId, setParentId] = useState<string>("");
@@ -36,6 +36,36 @@ const CategorySelector: React.FC<Props> = ({ onSelect }) => {
         else if (childId) onSelect(Number(childId));
         else if (parentId) onSelect(Number(parentId));
     }, [parentId, childId, stepChildId]);
+
+    // If a selectedId is provided (edit mode), pre-select the correct parent/child/stepchild
+    useEffect(() => {
+        if (selectedId == null) return
+        const id = Number(selectedId)
+        for (const p of categories) {
+            if (p.id === id) {
+                setParentId(String(p.id))
+                setChildId("")
+                setStepChildId("")
+                return
+            }
+            for (const c of p.children ?? []) {
+                if (c.id === id) {
+                    setParentId(String(p.id))
+                    setChildId(String(c.id))
+                    setStepChildId("")
+                    return
+                }
+                for (const sc of c.children ?? []) {
+                    if (sc.id === id) {
+                        setParentId(String(p.id))
+                        setChildId(String(c.id))
+                        setStepChildId(String(sc.id))
+                        return
+                    }
+                }
+            }
+        }
+    }, [categories, selectedId])
 
     // Add new category
     const handleAddCategory = async () => {

@@ -38,21 +38,6 @@ export default function ProductList() {
         fetchProducts()
     }, [])
 
-    async function handleUpdate(id: number, formData: FormData) {
-        try {
-            setBusyId(id)
-            const res = await api.put(`/api/seller/products/${id}/`, formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            })
-            setProducts(products.map(p => (p.id === id ? res.data : p)))
-            setEditProduct(null)
-        } catch (err) {
-            console.error("❌ Update failed:", err)
-            alert("Failed to update product.")
-        } finally {
-            setBusyId(null)
-        }
-    }
 
     async function removeProduct(id: number) {
         if (!confirm("Delete this product? This action cannot be undone.")) return
@@ -172,7 +157,11 @@ export default function ProductList() {
                             return (
                                 <ProductFormAny
                                     initialData={editProduct}
-                                    onCreated={(formData: any) => handleUpdate(editProduct.id, formData)}
+                                    onUpdated={(updated: any) => {
+                                        setProducts(products.map(p => (p.id === updated.id ? updated : p)))
+                                        setEditProduct(null)
+                                    }}
+                                    onCancel={() => setEditProduct(null)}
                                 />
                             )
                         })()

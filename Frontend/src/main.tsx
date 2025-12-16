@@ -129,19 +129,25 @@ createRoot(document.getElementById('root')!).render(
 if (import.meta.env.DEV) {
   ; (async () => {
     try {
-      const target = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 2000)
       try {
-        // Probe a lightweight endpoint
-        await fetch('/api/', { method: 'HEAD', signal: controller.signal })
+        // Probe a lightweight products endpoint which commonly exists; if it
+        // returns non-OK (404/etc) we assume the backend is reachable and do
+        // not warn — only network/connection errors should trigger guidance.
+        const probe = await fetch('/api/products/?page_size=1', { method: 'GET', signal: controller.signal })
+        if (!probe.ok) {
+          // backend responded with a non-OK status (404/400 etc). That's fine —
+          // backend is reachable. Do not warn to avoid noisy messages.
+        }
       } finally {
         clearTimeout(timeout)
       }
-    } catch (err) {
-      // Friendly multi-line console guidance
+    } catch (err: any) {
+      if (err && err.name === 'AbortError') return
+      // Friendly multi-line console guidance for network/connectivity issues
       // eslint-disable-next-line no-console
-      console.warn('\n[dev] Unable to reach backend through Vite proxy. This usually means the backend is not running or the proxy target is incorrect.\n' +
+      console.warn('\n[dev] Unable to reach backend through Vite proxy (network error). This usually means the backend is not running or the proxy target is incorrect.\n' +
         ' - Check your backend is running (default: http://localhost:8000)\n' +
         ' - Or set VITE_API_BASE_URL in your environment to the correct backend URL\n' +
         ' - Examples: VITE_API_BASE_URL=http://localhost:8000 or http://127.0.0.1:8000\n')

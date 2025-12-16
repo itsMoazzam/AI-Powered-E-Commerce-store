@@ -52,9 +52,9 @@ export default function RootLayout() {
                             <FooterTitle title="Help center" />
                             <FooterLinkGroup col>
                                 <FooterLink href="#" className="hover:text-primary transition">Discord</FooterLink>
-                                <FooterLink href="#" className="hover:text-primary transition">Twitter</FooterLink>
-                                <FooterLink href="#" className="hover:text-primary transition">Facebook</FooterLink>
-                                <FooterLink href="#" className="hover:text-primary transition">Contact Us</FooterLink>
+                                <FooterLink href="https://x.com/" className="hover:text-primary transition">Twitter</FooterLink>
+                                <FooterLink href="https://www.facebook.com/profile.php?id=100071573614937" className="hover:text-primary transition">Facebook</FooterLink>
+                                <FooterLink href="https://www.linkedin.com/in/rana-moazzam-077108258/" className="hover:text-primary transition">LinkrdIn</FooterLink>
                             </FooterLinkGroup>
                         </div>
                         <div>
@@ -77,10 +77,10 @@ export default function RootLayout() {
                         <div className="hidden md:block">
                             <FooterTitle title="Follow us" />
                             <FooterLinkGroup col>
-                                <FooterLink href="#" className="hover:text-primary transition">GitHub</FooterLink>
-                                <FooterLink href="#" className="hover:text-primary transition">Discord</FooterLink>
-                                <FooterLink href="#" className="hover:text-primary transition">Twitter</FooterLink>
-                                <FooterLink href="#" className="hover:text-primary transition">Facebook</FooterLink>
+                                <FooterLink href="https://github.com/itsMoazzam" className="hover:text-primary transition">GitHub</FooterLink>
+                                <FooterLink href="https://www.instagram.com/moon_bhi178/?hl=en" className="hover:text-primary transition">Instagram</FooterLink>
+                                <FooterLink href="https://x.com/" className="hover:text-primary transition">Twitter</FooterLink>
+                                <FooterLink href="https://www.facebook.com/profile.php?id=100071573614937" className="hover:text-primary transition">Facebook</FooterLink>
                             </FooterLinkGroup>
                         </div>
                     </div>
@@ -89,11 +89,11 @@ export default function RootLayout() {
                     <div className="w-full border-t border-card px-0 sm:px-6 py-6 sm:py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
                         <FooterCopyright by="AI-Powered E-Commerce™" year={2025} />
                         <div className="flex gap-4 sm:gap-6">
-                            <FooterIcon href="#" icon={BsFacebook} />
-                            <FooterIcon href="#" icon={BsInstagram} />
-                            <FooterIcon href="#" icon={BsTwitter} />
-                            <FooterIcon href="#" icon={BsGithub} />
-                            <FooterIcon href="#" icon={BsDribbble} />
+                            <FooterIcon href="https://www.facebook.com/profile.php?id=100071573614937" icon={BsFacebook} />
+                            <FooterIcon href="https://www.instagram.com/moon_bhi178/?hl=en" icon={BsInstagram} />
+                            <FooterIcon href="https://x.com/" icon={BsTwitter} />
+                            <FooterIcon href="https://github.com/itsMoazzam" icon={BsGithub} />
+                            <FooterIcon href="https://dribbble.com/" icon={BsDribbble} />
                         </div>
                     </div>
                 </div>

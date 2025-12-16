@@ -71,6 +71,39 @@ export default function OrderHistory() {
               <div className="flex items-center gap-2">
                 <div className="text-sm">{o.status}</div>
                 <button className="btn-outline px-3 py-1 rounded" onClick={() => printInvoice(o)}>Invoice</button>
+                {/* Cancel if not paid */}
+                {['pending', 'reserved'].includes((o.status || '').toLowerCase()) && (
+                  <button className="btn-outline px-3 py-1 rounded" onClick={async () => {
+                    if (!confirm('Cancel this order?')) return
+                    try {
+                      const res = await api.post(`/api/orders/${o.id}/cancel/`)
+                      setOrders((prev) => prev.map(p => p.id === o.id ? res.data.order : p))
+                      alert('Order cancelled')
+                    } catch (err) { console.error(err); alert('Failed to cancel order') }
+                  }}>Cancel</button>
+                )}
+
+                {/* Confirm received if paid */}
+                {String(o.status).toLowerCase() === 'paid' && (
+                  <button className="btn-primary px-3 py-1 rounded" onClick={async () => {
+                    if (!confirm('Confirm you received the order?')) return
+                    try {
+                      const res = await api.post(`/api/orders/${o.id}/confirm-received/`)
+                      setOrders((prev) => prev.map(p => p.id === o.id ? res.data.order : p))
+                      alert('Thank you! Order marked as completed.')
+                    } catch (err) { console.error(err); alert('Failed to confirm received') }
+                  }}>Confirm Received</button>
+                )}
+                {/* Feedback */}
+                <button className="btn-outline px-3 py-1 rounded" onClick={async () => {
+                  const msg = prompt('Leave feedback for this order (optional)')
+                  if (msg == null) return
+                  try {
+                    const res = await api.post(`/api/orders/${o.id}/feedback/`, { message: msg })
+                    setOrders((prev) => prev.map(p => p.id === o.id ? res.data.order : p))
+                    alert('Feedback saved')
+                  } catch (err) { console.error(err); alert('Failed to submit feedback') }
+                }}>Feedback</button>
               </div>
             </div>
             {o.items && (

@@ -54,6 +54,11 @@ Security
 - This server stores orders/payments in-memory for demo only. Do NOT use in production.
 - Keep `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` secret; do not commit them.
 
+Dev-only simulate endpoint
+- POST `/api/testing/payments/simulate/` - marks an order as paid and creates a demo seller balance entry scheduled for payout in 14 days. This endpoint is **development-only** and should be protected in non-dev environments.
+- Enable it by running with `NODE_ENV=development` (default for local dev) or set `ENABLE_DEV_SIMULATE=true`.
+- For extra protection, set `DEV_SIMULATE_KEY` in server `.env` and include it in the request as header `x-dev-simulate-key` or in the JSON body as `dev_key`.
+
 Next steps
 - Persist data in a DB (Postgres/SQLite)
 - Integrate with your actual order model and authentication

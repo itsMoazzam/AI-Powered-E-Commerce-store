@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, Star } from "lucide-react";
-import { FaShoppingCart, FaSearch, FaHeart, FaHome, FaCat, FaSun, FaMoon } from "react-icons/fa";
+import { FaShoppingCart, FaSearch, FaHeart, FaHome, FaCat, FaSun, FaMoon, FaReceipt } from "react-icons/fa";
+import { loadOrderHistory } from '../../lib/checkout'
 import CartDrawer from "./Cart";
 import { useTheme } from '../../theme/ThemeProvider'
 import api from "../../lib/api";
@@ -51,6 +52,7 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
     const navigate = useNavigate();
     const [localCartCount, setLocalCartCount] = useState<number>(0)
     const [localWishlistCount, setLocalWishlistCount] = useState<number>(0)
+    const [localOrdersCount, setLocalOrdersCount] = useState<number>(0)
     const [notificationsOpen, setNotificationsOpen] = useState(false)
     const [notifications, setNotifications] = useState<any[]>([])
     const [topOpen, setTopOpen] = useState(false)
@@ -147,6 +149,18 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                     const wArr = wRaw ? JSON.parse(wRaw) : []
                     if (isMounted) setLocalWishlistCount(wArr.length)
                 }
+                // orders history local count (per-user)
+                try {
+                    const raw = localStorage.getItem('user')
+                    const parsed = raw ? JSON.parse(raw) : null
+                    const role = parsed?.role || localStorage.getItem('role')
+                    if (parsed && role === 'customer') {
+                        const localOrders = loadOrderHistory() || []
+                        if (isMounted) setLocalOrdersCount(Array.isArray(localOrders) ? localOrders.length : 0)
+                    } else {
+                        if (isMounted) setLocalOrdersCount(0)
+                    }
+                } catch { if (isMounted) setLocalOrdersCount(0) }
             } catch (err) {
                 // ignore
             }
@@ -180,6 +194,7 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                             setUser(null)
                             setLocalCartCount(0)
                             setLocalWishlistCount(0)
+                            setLocalOrdersCount(0)
                         }
                     } catch { }
                 }
@@ -189,6 +204,12 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                 try {
                     const w = e.newValue ? JSON.parse(e.newValue) : []
                     setLocalWishlistCount(Array.isArray(w) ? w.length : 0)
+                } catch { }
+            }
+            if (e.key === 'intelligentCommerce_orderHistory') {
+                try {
+                    const arr = e.newValue ? JSON.parse(e.newValue) : []
+                    setLocalOrdersCount(Array.isArray(arr) ? arr.length : 0)
                 } catch { }
             }
         }
@@ -419,6 +440,14 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                             )}
                         </div>
                         {/* Wishlist visible to customers and guests (local fallback) */}
+                        {/* Top sellers (star) */}
+                        {/* Orders (customer-only) placed between Top Sellers and Wishlist */}
+                        {(user?.role === 'customer') && (
+                            <Link to="/orders" className="hidden sm:inline p-1 rounded hover:bg-black/5 relative" style={{ color: 'var(--color-primary)' }} title="My Orders">
+                                <FaReceipt size={20} />
+                                {localOrdersCount > 0 && <span className="notif-badge absolute -top-2 -right-2">{localOrdersCount}</span>}
+                            </Link>
+                        )}
                         {(user?.role === 'customer' || !user) && (
                             <Link to="/wishlist" className="hidden sm:inline p-1 rounded hover:bg-black/5 relative" style={{ color: 'var(--color-primary)' }} title="Wishlist">
                                 <FaHeart size={20} />
@@ -681,7 +710,7 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                         {user && user.role !== 'customer' ? (
                             <Link
                                 to={user.role === 'seller' ? '/seller' : '/admin'}
-                                className="hidden lg:inline-flex p-2 rounded-md relative ml-2"
+                                className="hidden lg:inline-flex p-2 rounded-md relative ml-2 cursor-pointer"
                                 style={{ color: 'var(--color-primary)' }}
                                 aria-label="Dashboard"
                                 title="Dashboard"
@@ -698,7 +727,7 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                                         navigate('/auth/login')
                                     }
                                 }}
-                                className="hidden lg:inline-flex p-2 rounded-md relative ml-5"
+                                className="hidden lg:inline-flex p-2 rounded-md relative ml-5 cursor-pointer"
                                 style={{ color: 'var(--color-primary)' }}
                                 aria-label="Cart"
                                 title="Cart"

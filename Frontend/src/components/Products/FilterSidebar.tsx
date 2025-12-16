@@ -133,7 +133,7 @@ export default function FilterSidebar({ onFilterChange }: FilterProps) {
               type="number"
               value={filters.price__gte}
               onChange={(e) => handleChange('price__gte', Number(e.target.value))}
-              className="input-responsive flex-1"
+              className="input-responsive flex-1 w-2"
               style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
               min={0}
               placeholder="Min"
@@ -143,7 +143,7 @@ export default function FilterSidebar({ onFilterChange }: FilterProps) {
               type="number"
               value={filters.price__lte}
               onChange={(e) => handleChange('price__lte', Number(e.target.value))}
-              className="input-responsive flex-1"
+              className="input-responsive flex-1 w-1"
               style={{ background: 'var(--bg)', color: 'var(--text)', borderColor: 'var(--card-border)' }}
               min={0}
               placeholder="Max"
