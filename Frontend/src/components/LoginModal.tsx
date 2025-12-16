@@ -85,10 +85,11 @@ export default function LoginModal({ isOpen, onClose, anchorRect }: LoginModalPr
             />
 
             {/* Modal or anchored popover */}
-            <div className="fixed inset-0 z-50 p-4 pointer-events-none">
-                {/* Decorative glows when modal centered (not anchored) */}
+            <div className="fixed inset-0 z-50 p-4 pt-8 pointer-events-none mt-8">
+                {/* Decorative glows and slow-moving background when modal centered (not anchored) */}
                 {!isAnchored && (
                     <>
+                        <div className="auth-modal-bg" />
                         <div className="absolute w-72 h-72 bg-blue-600/30 rounded-full blur-3xl top-20 left-8 animate-pulse" />
                         <div className="absolute w-72 h-72 bg-purple-600/30 rounded-full blur-3xl bottom-20 right-8 animate-pulse delay-300" />
                     </>
@@ -191,7 +192,7 @@ export default function LoginModal({ isOpen, onClose, anchorRect }: LoginModalPr
                                 <p className="text-center text-sm text-gray-400">
                                     Don't have an account?{" "}
                                     <Link
-                                        to="/auth/register"
+                                        to="/register"
                                         className="text-indigo-600 hover:underline"
                                         onClick={onClose}
                                     >

@@ -8,6 +8,7 @@ import Protected from './components/Protected'
 import Register from './pages/auth/register/Register'
 import SearchPage from './pages/search/SearchPage'
 import Help from './pages/Help'
+import Wishlist from './pages/WishList'
 const Profile = lazy(() => import('./pages/Profile'))
 const CategoryPage = lazy(() => import('./pages/category/CategoryPage'))
 const ProductDetail = lazy(() => import('./pages/Products/ProductDetail'))
@@ -35,6 +36,7 @@ function App() {
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/help" element={<Help />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path='/wishlist' element={<Protected allow={['customer']}><Wishlist /></Protected>} />
           <Route path='/profile' element={<Protected allow={['customer', 'seller', 'admin']}><Profile /></Protected>} />
           <Route path="/checkout" element={<Protected allow={['customer']}><Checkout /></Protected>} />
           <Route path="/orders" element={<Protected allow={['customer']}><OrderHistory /></Protected>} />

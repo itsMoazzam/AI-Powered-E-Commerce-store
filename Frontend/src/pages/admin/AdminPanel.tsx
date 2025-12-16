@@ -6,6 +6,7 @@ import { useTheme } from "../../theme/ThemeProvider"
 type Payment = { id: number; txn_id: string; amount: string; bank: string; ocr_summary: string; email_match: boolean; screenshot: string }
 type Review = { id: number; text: string; toxicity: number; plagiarism: number }
 type SystemStatus = { name: string; status: string }
+type Report = { id: number; title?: string; type?: string; details?: string; created_at?: string }
 type User = { id: number; username: string; email: string; first_name: string; last_name: string; is_active: boolean; is_blocked: boolean; role: string; created_at: string; last_login: string }
 type Seller = { id: number; username: string; email: string; first_name: string; last_name: string; business_name: string; is_active: boolean; is_blocked: boolean; approved: boolean; suspended: boolean; created_at: string; rating: number }
 type SystemConfig = { maintenance_mode: boolean; max_upload_size: number; commission_rate: number; minimum_withdrawal: number; email_notifications_enabled: boolean; sms_notifications_enabled: boolean }
@@ -18,8 +19,10 @@ export default function AdminPanel() {
     const [payments, setPayments] = useState<Payment[]>([])
     const [reviews, setReviews] = useState<Review[]>([])
     const [systems, setSystems] = useState<SystemStatus[]>([])
+    const [reports, setReports] = useState<Report[]>([])
     const [users, setUsers] = useState<User[]>([])
     const [sellers, setSellers] = useState<Seller[]>([])
+    const [counts, setCounts] = useState<{ payments: number; reviews: number; users: number; sellers: number }>({ payments: 0, reviews: 0, users: 0, sellers: 0 })
     const [systemConfig, setSystemConfig] = useState<SystemConfig>({
         maintenance_mode: false, max_upload_size: 5, commission_rate: 5, minimum_withdrawal: 100,
         email_notifications_enabled: true, sms_notifications_enabled: true
@@ -39,18 +42,37 @@ export default function AdminPanel() {
     const processingIds = useRef<Set<number>>(new Set())
 
     useEffect(() => {
-        const endpoints: Record<string, string> = { payments: "/api/admin/payments/", reviews: "/api/admin/reviews/", system: "/api/admin/system-status/", users: "/api/admin/users/", sellers: "/api/admin/sellers/" }
+        const endpoints: Record<string, string> = { payments: "/api/admin/payments/", reviews: "/api/admin/reviews/", system: "/api/admin/system-status/", users: "/api/admin/users/", sellers: "/api/admin/sellers/", reports: "/api/admin/reports/" }
         const url = endpoints[tab]
         if (url) {
             (async () => {
                 try {
                     const { data } = await api.get(url)
-                    if (tab === "payments") setPayments(data || [])
-                    if (tab === "reviews") setReviews(data || [])
-                    if (tab === "system") setSystems(data || [])
-                    if (tab === "users") setUsers(data || [])
-                    if (tab === "sellers") setSellers(data || [])
-                } catch (err) { console.error('Fetch failed', err) }
+                    // Normalize responses that may be paginated ({ results: [] })
+                    const list = Array.isArray(data) ? data : (data && (data as any).results ? (data as any).results : [])
+                    if (import.meta.env.DEV) console.debug(`Admin fetch ${url} -> ${list.length} items`)
+                    if (tab === "payments") setPayments(list)
+                    if (tab === "reviews") setReviews(list)
+                    if (tab === "system") setSystems(list)
+                    if (tab === "users") setUsers(list)
+                    if (tab === "sellers") setSellers(list)
+                    if (tab === "reports") setReports(list)
+                } catch (err) {
+                    const status = (err as any)?.response?.status
+                    const expected = [400, 401, 403, 404]
+                    if (expected.includes(status)) {
+                        // Treat common client errors as empty result (avoid noisy logs)
+                        if (tab === "payments") setPayments([])
+                        if (tab === "reviews") setReviews([])
+                        if (tab === "system") setSystems([])
+                        if (tab === "users") setUsers([])
+                        if (tab === "sellers") setSellers([])
+                        if (tab === "reports") setReports([])
+                        if (import.meta.env.DEV) console.debug(`Admin fetch ${url} -> ${status} (treated as empty)`)
+                    } else {
+                        console.error('Fetch failed', err)
+                    }
+                }
             })()
         }
         if (tab === "settings") {
@@ -62,6 +84,38 @@ export default function AdminPanel() {
                 } catch (err) { console.error('Config fetch failed', err) }
             })()
         }
+    }, [tab])
+
+    // Fetch lightweight counts for the dashboard so stats show before user clicks each tab
+    useEffect(() => {
+        if (tab !== 'dashboard') return
+        const endpoints: Record<string, string> = {
+            payments: '/api/admin/payments/?page_size=1',
+            reviews: '/api/admin/reviews/?page_size=1',
+            users: '/api/admin/users/?page_size=1',
+            sellers: '/api/admin/sellers/?page_size=1',
+        }
+
+        const entries = Object.entries(endpoints)
+        Promise.allSettled(entries.map(([_, url]) => api.get(url))).then((results) => {
+            const next: typeof counts = { payments: 0, reviews: 0, users: 0, sellers: 0 }
+            results.forEach((r, i) => {
+                const key = entries[i][0] as keyof typeof next
+                if (r.status === 'fulfilled') {
+                    const data = (r.value as any).data
+                    const count = typeof data?.count === 'number' ? data.count : Array.isArray(data) ? data.length : (Array.isArray(data?.results) ? data.results.length : 0)
+                    next[key] = count
+                } else {
+                    // Treat expected client errors as zero
+                    const status = (r.reason as any)?.response?.status
+                    if ([400, 401, 403, 404].includes(status)) next[key] = 0
+                    else {
+                        console.error(`Dashboard count fetch failed for ${entries[i][0]}`, r.reason)
+                    }
+                }
+            })
+            setCounts(next)
+        })
     }, [tab])
 
     // Keep sidebar state in sync with window size so desktop always shows sidebar
@@ -275,10 +329,10 @@ export default function AdminPanel() {
                         <div className="space-y-4 md:space-y-6">
                             <h2 className="text-2xl md:text-3xl font-semibold text-default">Overview</h2>
                             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
-                                <StatCard title="Payments" value={payments.length} />
-                                <StatCard title="Reviews" value={reviews.length} />
-                                <StatCard title="Users" value={users.length} />
-                                <StatCard title="Sellers" value={sellers.length} />
+                                <StatCard title="Payments" value={payments.length || counts.payments} />
+                                <StatCard title="Reviews" value={reviews.length || counts.reviews} />
+                                <StatCard title="Users" value={users.length || counts.users} />
+                                <StatCard title="Sellers" value={sellers.length || counts.sellers} />
                             </div>
                             <Section title="Recent Payments">
                                 <div className="space-y-2">
@@ -330,7 +384,7 @@ export default function AdminPanel() {
                                                 <tr className="border-b border-card">
                                                     <th className="text-left py-2 md:py-3 px-2 md:px-3 font-semibold">User</th>
                                                     <th className="text-left py-2 md:py-3 px-2 md:px-3 font-semibold hidden sm:table-cell">Status</th>
-                                                    <th className="text-left py-2 md:py-3 px-2 md:px-3 font-semibold hidden md:table-cell">Joined</th>
+                                                    {/* <th className="text-left py-2 md:py-3 px-2 md:px-3 font-semibold hidden md:table-cell">Joined</th> */}
                                                     <th className="text-left py-2 md:py-3 px-2 md:px-3 font-semibold">Actions</th>
                                                 </tr>
                                             </thead>
@@ -347,7 +401,7 @@ export default function AdminPanel() {
                                                                 {u.is_blocked ? 'Blocked' : u.is_active ? 'Active' : 'Inactive'}
                                                             </span>
                                                         </td>
-                                                        <td className="py-2 md:py-3 px-2 md:px-3 hidden md:table-cell text-xs text-muted">{new Date(u.created_at).toLocaleDateString()}</td>
+                                                        {/* <td className="py-2 md:py-3 px-2 md:px-3 hidden md:table-cell text-xs text-muted">{new Date(u.created_at).toLocaleDateString()}</td> */}
                                                         <td className="py-2 md:py-3 px-2 md:px-3">
                                                             <div className="flex gap-1">
                                                                 <button onClick={() => { setEditingUser(u); setShowEditUserModal(true) }} className="p-1.5 md:p-2 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-300" title="Edit"><Edit2 className="w-3 h-3 md:w-4 md:h-4" /></button>
@@ -459,7 +513,28 @@ export default function AdminPanel() {
                         </Section>
                     )}
 
-                    {tab === "reports" && <Section title="Reports"><div className="text-muted text-sm">Reports section under development.</div></Section>}
+                    {tab === "reports" && (
+                        <Section title="Reports">
+                            {reports.length === 0 ? (
+                                <div className="text-center py-8 text-muted">No reports found</div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {reports.map((r) => (
+                                        <div key={r.id} className="p-3 md:p-4 border border-card rounded-lg bg-surface">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <div className="font-medium text-default truncate">{r.title || `Report #${r.id}`}</div>
+                                                    <div className="text-xs text-muted mt-1 truncate">{r.type || 'General'}</div>
+                                                    {r.details && <div className="text-xs text-muted mt-2 line-clamp-3">{r.details}</div>}
+                                                </div>
+                                                <div className="text-xs text-muted text-right">{r.created_at ? new Date(r.created_at).toLocaleString() : null}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </Section>
+                    )}
                 </div>
             </main>
 

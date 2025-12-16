@@ -81,6 +81,8 @@ export default function PaymentDemo() {
     const [orderId, setOrderId] = useState<number | null>(null)
     const [creating, setCreating] = useState(false)
     const [note, setNote] = useState<string | null>(null)
+    const [checking, setChecking] = useState(false)
+    const [simulating, setSimulating] = useState(false)
 
     const createOrder = async () => {
         setCreating(true)
@@ -112,6 +114,53 @@ export default function PaymentDemo() {
                     <div className="mt-4">
                         <h3 className="font-medium">Order #{orderId}</h3>
                         <StripeCheckout orderId={orderId} />
+
+                        {/* Dev helpers: simulate payment or check status without using Stripe */}
+                        {import.meta.env.DEV && (
+                            <div className="mt-4 flex gap-2">
+                                <button
+                                    onClick={async () => {
+                                        if (!orderId) return
+                                        setSimulating(true)
+                                        setNote(null)
+                                        try {
+                                            // dev-only simulate endpoint; backend should finalize order same as webhook
+                                            await apiCall('POST', '/api/testing/payments/simulate/', { order_id: orderId })
+                                            setNote('Simulated payment: order finalized (dev only).')
+                                        } catch (err: any) {
+                                            console.error(err)
+                                            setNote(err?.message || 'Simulate failed')
+                                        } finally {
+                                            setSimulating(false)
+                                        }
+                                    }}
+                                    disabled={simulating}
+                                    className="px-3 py-2 bg-yellow-500 text-white rounded"
+                                >
+                                    {simulating ? 'Simulating…' : 'Simulate Payment (dev)'}
+                                </button>
+
+                                <button
+                                    onClick={async () => {
+                                        if (!orderId) return
+                                        setChecking(true)
+                                        try {
+                                            const check = await apiCall('GET', `/api/orders/${orderId}/`)
+                                            setNote(`Order status: ${check.status || 'unknown'}${check.paid_at ? ' | Paid at: ' + check.paid_at : ''}`)
+                                        } catch (err: any) {
+                                            console.error(err)
+                                            setNote(err?.message || 'Failed to fetch order')
+                                        } finally {
+                                            setChecking(false)
+                                        }
+                                    }}
+                                    disabled={checking}
+                                    className="px-3 py-2 bg-gray-200 text-gray-800 rounded"
+                                >
+                                    {checking ? 'Checking…' : 'Check Order Status'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </Elements>
             )}

@@ -80,6 +80,80 @@ body {
 .btn-primary:hover { filter: brightness(0.95) }
 .btn-outline { border: 1px solid var(--border); background: transparent }
 
+/* Animated background for auth pages: two moving gradient bands (horizontal + vertical)
+     Use `auth-bg-lines` on the container that wraps auth forms. The content inside
+     is kept static and sits above the animated background. */
+.auth-bg-lines {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.5rem; /* similar to rounded */
+    /* subtle surface so card contrast remains */
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+}
+.auth-bg-lines > * { position: relative; z-index: 10; }
+.auth-bg-lines::before,
+.auth-bg-lines::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+    mix-blend-mode: screen;
+}
+
+/* Horizontal moving band (left-to-right) */
+.auth-bg-lines::before {
+    left: -40%;
+    top: 10%;
+    width: 140%;
+    height: 20%;
+    background: linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.25) 30%, rgba(236,72,153,0.18) 60%, transparent 100%);
+    transform: translateX(0);
+    animation: auth-slide-x 6s linear infinite;
+}
+
+/* Vertical moving band (top-to-bottom) */
+.auth-bg-lines::after {
+    top: -40%;
+    left: 12%;
+    height: 140%;
+    width: 16%;
+    background: linear-gradient(180deg, transparent 0%, rgba(59,130,246,0.18) 30%, rgba(16,185,129,0.12) 60%, transparent 100%);
+    transform: translateY(0);
+    animation: auth-slide-y 8s linear infinite;
+}
+
+@keyframes auth-slide-x {
+    0% { transform: translateX(-10%) }
+    50% { transform: translateX(10%) }
+    100% { transform: translateX(-10%) }
+}
+
+@keyframes auth-slide-y {
+    0% { transform: translateY(-10%) }
+    50% { transform: translateY(10%) }
+    100% { transform: translateY(-10%) }
+}
+
+/* Background for centered auth modal: slow vertical motion */
+.auth-modal-bg {
+    position: absolute;
+    left: -10%;
+    right: -10%;
+    top: -30%;
+    bottom: -30%;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(99,102,241,0.12), rgba(236,72,153,0.08), rgba(59,130,246,0.06));
+    filter: blur(24px) saturate(120%);
+    opacity: 0.95;
+    animation: auth-modal-slide 10s linear infinite;
+}
+
+@keyframes auth-modal-slide {
+    0% { transform: translateY(-8%) }
+    50% { transform: translateY(8%) }
+    100% { transform: translateY(-8%) }
+}
 .text-primary { color: var(--color-primary) !important }
 .text-default { color: var(--text) !important }
 .text-on-hero { color: var(--text-ontop) !important }

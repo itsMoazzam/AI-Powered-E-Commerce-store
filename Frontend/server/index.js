@@ -28,6 +28,7 @@ app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf } }))
 // Simple in-memory storage (demo only)
 const orders = {} // orderId -> { id, status, amount_cents, paid_at }
 const payments = {} // paymentIntentId -> { id, status, order_id }
+const sellerBalances = [] // demo ledger entries for scheduled payouts
 let nextOrderId = 1000
 
 // Create a demo order
@@ -100,6 +101,39 @@ app.get('/api/orders/:id/', (req, res) => {
     return res.json(order)
 })
 
+// Cancel an order (if not paid)
+app.post('/api/orders/:id/cancel/', (req, res) => {
+    const id = req.params.id
+    const order = orders[id]
+    if (!order) return res.status(404).json({ error: 'Order not found' })
+    if (order.status === 'paid') return res.status(400).json({ error: 'Paid orders cannot be cancelled' })
+    order.status = 'cancelled'
+    order.cancelled_at = new Date().toISOString()
+    return res.json({ success: true, order })
+})
+
+// Confirm received (customer) - marks order completed if it was paid
+app.post('/api/orders/:id/confirm-received/', (req, res) => {
+    const id = req.params.id
+    const order = orders[id]
+    if (!order) return res.status(404).json({ error: 'Order not found' })
+    if (order.status !== 'paid') return res.status(400).json({ error: 'Only paid orders can be confirmed received' })
+    order.status = 'completed'
+    order.completed_at = new Date().toISOString()
+    return res.json({ success: true, order })
+})
+
+// Submit feedback for an order (customer)
+app.post('/api/orders/:id/feedback/', (req, res) => {
+    const id = req.params.id
+    const order = orders[id]
+    if (!order) return res.status(404).json({ error: 'Order not found' })
+    const body = req.body || {}
+    order.feedback = order.feedback || []
+    order.feedback.push({ message: body.message || '', created_at: new Date().toISOString() })
+    return res.json({ success: true, order })
+})
+
 // Get notifications endpoint (returns mock data for now)
 app.get('/api/notifications/', (req, res) => {
     const limit = parseInt(req.query.limit || 5, 10)
@@ -167,7 +201,52 @@ app.post('/api/webhooks/stripe/', (req, res) => {
     res.json({ received: true })
 })
 
+// Dev-only: simulate a successful payment for an order (for testing without Stripe)
+app.post('/api/testing/payments/simulate/', (req, res) => {
+    // Allow usage only in development or if explicitly enabled via env var
+    const allowDev = process.env.NODE_ENV === 'development' || process.env.ENABLE_DEV_SIMULATE === 'true'
+    const secretKey = process.env.DEV_SIMULATE_KEY || ''
+    if (!allowDev) return res.status(404).json({ error: 'Not found' })
+
+    // If a secret key is set, require the same key in the header for extra protection
+    if (secretKey) {
+        const provided = req.headers['x-dev-simulate-key'] || req.body?.dev_key
+        if (!provided || provided !== secretKey) return res.status(403).json({ error: 'Forbidden' })
+    }
+
+    const { order_id } = req.body || {}
+    if (!order_id || !orders[order_id]) return res.status(400).json({ error: 'order_id missing or invalid' })
+
+    const order = orders[order_id]
+
+    // Create a fake payment intent id and mark payment + order as succeeded
+    const pid = `dev_pi_${Date.now()}`
+    payments[pid] = { id: pid, status: 'succeeded', order_id: order.id }
+
+    order.status = 'paid'
+    order.paid_at = new Date().toISOString()
+
+    // Create a simple seller balance ledger entry (demo): platform takes 5% fee
+    const platformFee = Math.round((order.amount_cents || 0) * 0.05)
+    const sellerNet = (order.amount_cents || 0) - platformFee
+    const scheduled = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days
+    sellerBalances.push({ seller_id: 1, order_id: order.id, amount_gross: order.amount_cents || 0, platform_fee: platformFee, seller_net: sellerNet, payout_status: 'pending', scheduled_payout_date: scheduled.toISOString() })
+
+    console.log(`Dev-simulated payment for order ${order.id} (pid=${pid}). Scheduled payout: ${scheduled.toISOString()}`)
+
+    return res.json({ success: true, order })
+})
+
+// Seller balances listing (demo)
+app.get('/api/seller/balances/', (req, res) => {
+    return res.json(sellerBalances)
+})
+
 app.listen(port, () => {
     console.log(`Stripe demo server listening on http://localhost:${port}`)
     console.log('Make sure to set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in server/.env')
+    const devSimEnabled = process.env.NODE_ENV === 'development' || process.env.ENABLE_DEV_SIMULATE === 'true'
+    if (devSimEnabled) {
+        console.log('Dev simulate endpoint enabled: POST /api/testing/payments/simulate/ (use only in development). Set DEV_SIMULATE_KEY to require a header x-dev-simulate-key for extra protection.')
+    }
 })

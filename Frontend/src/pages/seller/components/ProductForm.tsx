@@ -1,13 +1,17 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import api from "../../../lib/api"
 import { Loader2, Plus, Trash, ImagePlus } from "lucide-react"
 import CategorySelector from "../../../components/Category"
 
 interface ProductFormProps {
-    onCreated: (p: any) => void
+    onCreated?: (p: any) => void
+    onUpdated?: (p: any) => void
+    onCancel?: () => void
+    product?: any
+    initialData?: any
 }
 
-export default function ProductForm({ onCreated }: ProductFormProps) {
+export default function ProductForm({ onCreated, onUpdated, onCancel, product, initialData }: ProductFormProps) {
     const [form, setForm] = useState({
         title: "",
         price: "",
@@ -18,16 +22,51 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
     })
 
     const [thumbnail, setThumbnail] = useState<File | null>(null)
+    const [existingThumbnailUrl, setExistingThumbnailUrl] = useState<string | null>(null)
+    const [removeThumbnail, setRemoveThumbnail] = useState(false)
     const [model3d, setModel3d] = useState<File | null>(null)
 
     // 🔥 Each image now includes extra metadata
     const [images, setImages] = useState<
-        { file: File | null; alt_text: string; is_primary: boolean }[]
+        { file: File | null; alt_text: string; is_primary: boolean; url?: string; removed?: boolean }[]
     >([])
 
     const [videos, setVideos] = useState<File[]>([])
     const [customFields, setCustomFields] = useState([{ key: "", value: "" }])
     const [loading, setLoading] = useState(false)
+
+    // support edit mode: product or initialData can supply existing values
+    const editing = !!(product || initialData)
+    const existing = product || initialData
+
+    useEffect(() => {
+        if (existing) {
+            setForm({
+                title: existing.title || "",
+                price: String(existing.price ?? ""),
+                description: existing.description || "",
+                category: existing.category || 0,
+                stock: existing.stock_qty ?? existing.stock ?? 0,
+                discount: existing.discount ?? 0,
+            })
+            // Prefill thumbnail and images if available
+            setExistingThumbnailUrl(existing.thumbnail || null)
+            if (Array.isArray(existing.images) && existing.images.length > 0) {
+                setImages(existing.images.map((img: any, idx: number) => ({
+                    file: null,
+                    alt_text: img.alt_text || "",
+                    is_primary: !!img.is_primary || idx === 0,
+                    url: img.url || img.image || "",
+                    removed: false,
+                })))
+            } else if (existing.image || (existing.images_urls && Array.isArray(existing.images_urls))) {
+                const arr: any[] = []
+                if (existing.image) arr.push({ url: existing.image, alt_text: "", is_primary: true, file: null, removed: false })
+                if (existing.images_urls) arr.push(...existing.images_urls.map((u: string) => ({ url: u, alt_text: "", is_primary: false, file: null, removed: false })))
+                if (arr.length) setImages(arr)
+            }
+        }
+    }, [existing])
 
     const addImageSlot = () =>
         setImages([
@@ -70,30 +109,46 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
             }
         })
 
-        try {
-            const { data } = await api.post("/api/seller/products/", fd, {
-                headers: { "Content-Type": "multipart/form-data" },
-            })
-            onCreated(data)
-            alert("✅ Product created successfully!")
+        // Include removal flags for existing images (if user marked them)
+        images.forEach((img) => {
+            if (img.url && img.removed) fd.append("remove_images", img.url)
+        })
 
-            // Reset
-            setForm({
-                title: "",
-                price: "",
-                description: "",
-                category: 0,
-                stock: 0,
-                discount: 0,
-            })
-            setThumbnail(null)
-            setModel3d(null)
-            setImages([])
-            setVideos([])
-            setCustomFields([{ key: "", value: "" }])
+        // Include thumbnail removal flag
+        if (removeThumbnail) fd.append("remove_thumbnail", "true")
+
+        try {
+            if (editing && existing?.id) {
+                const { data: updated } = await api.put(`/api/seller/products/${existing.id}/`, fd, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                })
+                if (onUpdated) onUpdated(updated)
+                alert("✅ Product updated successfully!")
+            } else {
+                const { data: created } = await api.post("/api/seller/products/", fd, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                })
+                if (onCreated) onCreated(created)
+                alert("✅ Product created successfully!")
+
+                // Reset create form
+                setForm({
+                    title: "",
+                    price: "",
+                    description: "",
+                    category: 0,
+                    stock: 0,
+                    discount: 0,
+                })
+                setThumbnail(null)
+                setModel3d(null)
+                setImages([])
+                setVideos([])
+                setCustomFields([{ key: "", value: "" }])
+            }
         } catch (error) {
-            console.error("❌ Product creation failed:", error)
-            alert("Product creation failed — check category or authentication.")
+            console.error("❌ Product operation failed:", error)
+            alert("Product operation failed — check category or authentication.")
         } finally {
             setLoading(false)
         }
@@ -104,9 +159,7 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
             onSubmit={submit}
             className="bg-white rounded-2xl p-6 shadow-sm space-y-6 max-w-3xl mx-auto"
         >
-            <h3 className="text-xl font-semibold text-zinc-800">
-                Add New Product
-            </h3>
+            <h3 className="text-xl font-semibold text-zinc-800">{editing ? 'Edit Product' : 'Add New Product'}</h3>
 
             {/* Core Fields */}
             <div className="grid gap-4 md:grid-cols-2">
@@ -169,11 +222,26 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
                     <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) =>
+                        onChange={(e) => {
                             setThumbnail(e.target.files?.[0] || null)
-                        }
+                            setRemoveThumbnail(false)
+                        }}
                         className="mt-1 block text-sm text-zinc-600"
                     />
+
+                    {existingThumbnailUrl && !thumbnail && (
+                        <div className="mt-2 flex items-center gap-3">
+                            <img src={existingThumbnailUrl} alt="thumbnail" className="w-20 h-12 object-cover rounded" />
+                            <label className="flex items-center gap-2 text-sm">
+                                <input type="checkbox" checked={removeThumbnail} onChange={(e) => setRemoveThumbnail(e.target.checked)} /> Remove thumbnail
+                            </label>
+                        </div>
+                    )}
+                    {thumbnail && (
+                        <div className="mt-2">
+                            <img src={URL.createObjectURL(thumbnail)} alt="new thumbnail" className="w-28 h-16 object-cover rounded" />
+                        </div>
+                    )}
                 </div>
 
                 <div>
@@ -208,16 +276,30 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
 
                 {images.map((img, i) => (
                     <div key={`image-${i}`} className="grid md:grid-cols-3 gap-2 items-center">
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                                const copy = [...images]
-                                copy[i].file = e.target.files?.[0] || null
-                                setImages(copy)
-                            }}
-                            className="input-field"
-                        />
+                        {img.url && !img.file ? (
+                            <div className="flex items-center gap-3">
+                                <img src={img.url} alt={`img-${i}`} className="w-28 h-20 object-cover rounded" />
+                                <label className="flex items-center gap-2 text-sm">
+                                    <input type="checkbox" checked={!!img.removed} onChange={(e) => {
+                                        const copy = [...images]
+                                        copy[i].removed = e.target.checked
+                                        setImages(copy)
+                                    }} /> Remove
+                                </label>
+                            </div>
+                        ) : (
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                    const copy = [...images]
+                                    copy[i].file = e.target.files?.[0] || null
+                                    setImages(copy)
+                                }}
+                                className="input-field"
+                            />
+                        )}
+
                         <input
                             type="text"
                             placeholder="Alt text"
@@ -246,7 +328,7 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
                         </label>
                         <button
                             type="button"
-                            onClick={() => removeImage(i)}
+                            onClick={() => setImages(images.filter((_, j) => j !== i))}
                             className="text-red-500 hover:text-red-700"
                         >
                             <Trash size={16} />
@@ -309,17 +391,22 @@ export default function ProductForm({ onCreated }: ProductFormProps) {
                 ))}
             </div>
 
-            <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg disabled:opacity-70"
-            >
-                {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                    "Add Product"
+            <div className="flex gap-2">
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-primary flex-1 flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg disabled:opacity-70"
+                >
+                    {loading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                        editing ? 'Update Product' : 'Add Product'
+                    )}
+                </button>
+                {onCancel && (
+                    <button type="button" onClick={onCancel} className="btn-outline flex-1 py-3 rounded-lg">Cancel</button>
                 )}
-            </button>
+            </div>
         </form>
     )
 }

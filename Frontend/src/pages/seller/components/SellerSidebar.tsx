@@ -18,7 +18,7 @@ export default function SellerSidebar({ view, setView, productCount }: SellerSid
         { id: "add", label: "Add Product", icon: <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5" /> },
         { id: "orders", label: "Orders", icon: <FileText className="w-4 h-4 sm:w-5 sm:h-5" /> },
         { id: "advertisements", label: "Advertisements", icon: <Zap className="w-4 h-4 sm:w-5 sm:h-5" /> },
-        { id: "payments", label: "Payments", icon: <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" /> },
+        { id: "balances", label: "Balances", icon: <BarChart2 className="w-4 h-4 sm:w-5 sm:h-5" /> },
         { id: "reviews", label: "Reviews", icon: <FileText className="w-4 h-4 sm:w-5 sm:h-5" /> },
         { id: "system", label: "System Health", icon: <Server className="w-4 h-4 sm:w-5 sm:h-5" /> },
         { id: "reports", label: "Reports", icon: <BarChart2 className="w-4 h-4 sm:w-5 sm:h-5" /> },

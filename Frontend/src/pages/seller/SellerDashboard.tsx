@@ -10,11 +10,14 @@ import ReportsPanel from "./components/ReportsPanel"
 import CSVUpload from "./components/CSVUpload"
 import OrdersPanel from "./components/OrdersPanel"
 import AdvertisementPanel from "./components/AdvertisementPanel"
+import SellerBalancePanel from "./components/SellerBalancePanel"
 import api from "../../lib/api"
 
 type View = "products" | "add" | "edit" | "payments" | "reviews" | "system" | "reports" | "bulk"
 // include orders and advertisements views
 type ExtendedView = View | 'orders' | 'advertisements'
+// include balances view
+type ExtendedView2 = ExtendedView | 'balances'
 
 type Product = {
     id: number | string
@@ -25,7 +28,7 @@ type Product = {
 }
 
 export default function SellerDashboard() {
-    const [view, setViewState] = useState<ExtendedView>("products")
+    const [view, setViewState] = useState<ExtendedView2>("products")
     const [products, setProducts] = useState<Product[]>([])
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
     const [sellerName, setSellerName] = useState<string | null>(null)
@@ -91,6 +94,7 @@ export default function SellerDashboard() {
                         <div className="flex items-center gap-3">
                             <button onClick={() => setViewState("bulk")} className="btn-outline p-1">Bulk Upload</button>
                             <button onClick={() => setViewState("add")} className="btn-primary p-1">Add Product</button>
+                            <button onClick={() => setViewState("balances")} className="btn-outline p-1">View Balances</button>
                         </div>
                     </header>
 
@@ -121,6 +125,7 @@ export default function SellerDashboard() {
                     {view === "bulk" && <CSVUpload onImported={(items: any) => setProducts((s) => [...(items as Product[]), ...s])} />}
 
                     {view === "payments" && <PaymentsPanel payments={[]} onAction={(id, action) => { console.log('payments action', id, action) }} />}
+                    {view === "balances" && <SellerBalancePanel />}
                     {view === "orders" && <OrdersPanel />}
                     {view === "advertisements" && <AdvertisementPanel />}
                     {view === "reviews" && <ReviewsPanel onModerate={(id, action, reason) => { console.log('moderate', id, action, reason) }} />}

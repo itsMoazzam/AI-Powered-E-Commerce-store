@@ -76,7 +76,7 @@ const StepCustomer: React.FC<Props> = ({ form, onChange }) => {
                     <label className="sr-only">Height feet</label>
                     <input
                         className="input-field w-24"
-                        placeholder="ft"
+                        placeholder="Height ft"
                         type="number"
                         min={0}
                         value={feet}
@@ -92,7 +92,7 @@ const StepCustomer: React.FC<Props> = ({ form, onChange }) => {
                     <label className="sr-only">Height inches</label>
                     <input
                         className="input-field w-24"
-                        placeholder="in"
+                        placeholder="Height inches"
                         type="number"
                         min={0}
                         max={11}
