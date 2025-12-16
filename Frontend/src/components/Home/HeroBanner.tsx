@@ -105,17 +105,17 @@ export default function HeroBanner() {
     }
 
     return (
-        <div className="relative w-full h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[80vh] overflow-hidden    shadow-lg">
+        <div className="relative w-full h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[80vh] overflow-hidden shadow-lg">
             {slides.map((slide, index) => (
                 <div
                     key={`slide-${slide.id ?? index}-${index}`}
                     className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${current === index ? "opacity-100" : "opacity-0"
-                        }`}
+                        }`} 
                 >
                     <img
                         src={slide.image}
                         alt={slide.title}
-                        className="w-full h-full object-cover"
+                        className="h-full w-full object-cover mx-auto"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent" />
 
