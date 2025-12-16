@@ -30,7 +30,7 @@ export default function RootLayout() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
             >
-                <div className="    max-w-7xl m-auto ">
+                <div className="max-w-full m-auto ">
                     <Outlet />
                 </div>
             </motion.main>
