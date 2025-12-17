@@ -344,7 +344,16 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
             if (tres.ok) {
                 const data = await tres.json()
                 if (Array.isArray(data) && data.length > 0) {
-                    setTopSellers(data)
+                    // normalize seller shape so name/store fields are available in UI
+                    const normalize = (raw: any) => {
+                        const s = raw?.seller ?? raw?.user ?? raw
+                        const id = raw?.id ?? s?.id
+                        const displayName = s?.user?.profile?.full_name ?? s?.user?.full_name ?? s?.full_name ?? (s?.first_name && s?.last_name ? `${s.first_name} ${s.last_name}` : null) ?? s?.name ?? s?.username ?? null
+                        const businessName = raw?.business_name ?? s?.business_name ?? s?.store_name ?? s?.shop_name ?? null
+                        const count = raw?.count ?? raw?.ads_count ?? null
+                        return { ...raw, id, displayName, businessName, count }
+                    }
+                    setTopSellers(data.map(normalize))
                     return
                 }
             }
@@ -459,7 +468,10 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                                         {topSellers.length === 0 && <div className="text-sm text-default">Loading...</div>}
                                         {topSellers.map((s: any, i: number) => (
                                             <div key={`topseller-${s.id || i}`} className="flex items-center justify-between text-sm">
-                                                <div className="truncate">{s.name || `Seller ${s.id}`}</div>
+                                                <div className="truncate">
+                                                    <div className="font-medium line-clamp-1">{s.displayName ?? s.name ?? `Seller ${s.id}`}</div>
+                                                    {(s.businessName || s.business_name) && <div className="text-xs text-muted line-clamp-1">{s.businessName ?? s.business_name}</div>}
+                                                </div>
                                                 <div className="text-xs text-muted">{s.count ? `${s.count} ads` : ''}</div>
                                             </div>
                                         ))}

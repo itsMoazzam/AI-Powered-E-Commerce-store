@@ -16,6 +16,8 @@ type StepPersonalProps<T extends GenericForm> = {
     setRole: (r: Role) => void;
 };
 
+import { Eye, EyeOff } from 'lucide-react'
+
 export default function StepPersonal<T extends GenericForm>({
     form,
     onChange,
@@ -26,6 +28,7 @@ export default function StepPersonal<T extends GenericForm>({
     const [preview, setPreview] = useState<string | null>(null);
     const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
     const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
     const usernameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const emailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -200,14 +203,24 @@ export default function StepPersonal<T extends GenericForm>({
                     required
                 />
 
-                <input
-                    className="border border-gray-300 rounded-xl px-4 py-2 w-full text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    placeholder="Password"
-                    type="password"
-                    value={(form.password ?? "") as string}
-                    onChange={(e) => onChange("password" as any, e.target.value as any)}
-                    required
-                />
+                <div className="relative">
+                    <input
+                        className="border border-gray-300 rounded-xl px-4 py-2 w-full text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        placeholder="Password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={(form.password ?? "") as string}
+                        onChange={(e) => onChange("password" as any, e.target.value as any)}
+                        required
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword((s) => !s)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                </div>
 
 
             </div>

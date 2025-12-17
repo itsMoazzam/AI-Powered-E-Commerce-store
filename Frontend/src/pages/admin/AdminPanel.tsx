@@ -6,7 +6,7 @@ import { useTheme } from "../../theme/ThemeProvider"
 type Payment = { id: number; txn_id: string; amount: string; bank: string; ocr_summary: string; email_match: boolean; screenshot: string }
 type Review = { id: number; text: string; toxicity: number; plagiarism: number }
 type SystemStatus = { name: string; status: string }
-type Report = { id: number; title?: string; type?: string; details?: string; created_at?: string }
+type Report = { id: number; title?: string; type?: string; details?: string; created_at?: string; created?: string; timestamp?: string }
 type User = { id: number; username: string; email: string; first_name: string; last_name: string; is_active: boolean; is_blocked: boolean; role: string; created_at: string; last_login: string }
 type Seller = { id: number; username: string; email: string; first_name: string; last_name: string; business_name: string; is_active: boolean; is_blocked: boolean; approved: boolean; suspended: boolean; created_at: string; rating: number }
 type SystemConfig = { maintenance_mode: boolean; max_upload_size: number; commission_rate: number; minimum_withdrawal: number; email_notifications_enabled: boolean; sms_notifications_enabled: boolean }
@@ -41,6 +41,8 @@ export default function AdminPanel() {
 
     const processingIds = useRef<Set<number>>(new Set())
 
+    const [reportsAccessError, setReportsAccessError] = useState<string | null>(null)
+
     useEffect(() => {
         const endpoints: Record<string, string> = { payments: "/api/admin/payments/", reviews: "/api/admin/reviews/", system: "/api/admin/system-status/", users: "/api/admin/users/", sellers: "/api/admin/sellers/", reports: "/api/admin/reports/" }
         const url = endpoints[tab]
@@ -48,15 +50,28 @@ export default function AdminPanel() {
             (async () => {
                 try {
                     const { data } = await api.get(url)
-                    // Normalize responses that may be paginated ({ results: [] })
-                    const list = Array.isArray(data) ? data : (data && (data as any).results ? (data as any).results : [])
-                    if (import.meta.env.DEV) console.debug(`Admin fetch ${url} -> ${list.length} items`)
+
+                    // Normalize and support many response shapes: array | { results: [] } | { reports: [] } | { data: { results: [] } }
+                    let list: any[] = []
+                    if (Array.isArray(data)) list = data
+                    else if (Array.isArray((data as any).results)) list = (data as any).results
+                    else if (Array.isArray((data as any).reports)) list = (data as any).reports
+                    else if (Array.isArray((data as any).data?.results)) list = (data as any).data.results
+                    else if (Array.isArray((data as any).data?.reports)) list = (data as any).data.reports
+                    else if (Array.isArray((data as any).items)) list = (data as any).items
+                    else list = []
+
+                    if (import.meta.env.DEV) console.debug(`Admin fetch ${url} -> shape keys: ${Object.keys(data || {}).join(', ')} -> ${list.length} items`)
+
                     if (tab === "payments") setPayments(list)
                     if (tab === "reviews") setReviews(list)
                     if (tab === "system") setSystems(list)
                     if (tab === "users") setUsers(list)
                     if (tab === "sellers") setSellers(list)
-                    if (tab === "reports") setReports(list)
+                    if (tab === "reports") {
+                        setReports(list)
+                        setReportsAccessError(null)
+                    }
                 } catch (err) {
                     const status = (err as any)?.response?.status
                     const expected = [400, 401, 403, 404]
@@ -67,10 +82,17 @@ export default function AdminPanel() {
                         if (tab === "system") setSystems([])
                         if (tab === "users") setUsers([])
                         if (tab === "sellers") setSellers([])
-                        if (tab === "reports") setReports([])
+                        if (tab === "reports") {
+                            setReports([])
+                            // Provide a clearer message to the admin to check auth/permissions
+                            if (status === 401) setReportsAccessError('Unauthorized (401): your session may have expired. Please sign in again.')
+                            else if (status === 403) setReportsAccessError('Forbidden (403): your account lacks permission to view reports.')
+                            else setReportsAccessError(`Server returned ${status}`)
+                        }
                         if (import.meta.env.DEV) console.debug(`Admin fetch ${url} -> ${status} (treated as empty)`)
                     } else {
                         console.error('Fetch failed', err)
+                        if (tab === 'reports') setReportsAccessError('Failed to fetch reports; check server logs or network')
                     }
                 }
             })()
@@ -515,7 +537,18 @@ export default function AdminPanel() {
 
                     {tab === "reports" && (
                         <Section title="Reports">
-                            {reports.length === 0 ? (
+                            <div className="mb-3 flex items-center justify-between">
+                                <div />
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => setTab('reports')} className="px-3 py-1 rounded border text-sm">Refresh</button>
+                                </div>
+                            </div>
+
+                            {reportsAccessError && (
+                                <div className="text-center py-4 text-red-600">{reportsAccessError}</div>
+                            )}
+
+                            {reports.length === 0 && !reportsAccessError ? (
                                 <div className="text-center py-8 text-muted">No reports found</div>
                             ) : (
                                 <div className="space-y-3">
@@ -526,8 +559,10 @@ export default function AdminPanel() {
                                                     <div className="font-medium text-default truncate">{r.title || `Report #${r.id}`}</div>
                                                     <div className="text-xs text-muted mt-1 truncate">{r.type || 'General'}</div>
                                                     {r.details && <div className="text-xs text-muted mt-2 line-clamp-3">{r.details}</div>}
+                                                    {/* show raw payload preview for debugging */}
+                                                    {import.meta.env.DEV && <details className="mt-2 text-xs text-muted"><summary>Raw</summary><pre className="max-h-48 overflow-auto text-xs mt-2 bg-black/5 p-2 rounded">{JSON.stringify(r, null, 2)}</pre></details>}
                                                 </div>
-                                                <div className="text-xs text-muted text-right">{r.created_at ? new Date(r.created_at).toLocaleString() : null}</div>
+                                                <div className="text-xs text-muted text-right">{(() => { const t = r.created_at ?? r.created ?? r.timestamp; return t ? new Date(String(t)).toLocaleString() : null })()}</div>
                                             </div>
                                         </div>
                                     ))}

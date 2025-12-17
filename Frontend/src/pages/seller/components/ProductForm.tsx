@@ -304,7 +304,22 @@ export default function ProductForm({ onCreated, onUpdated, onCancel, product, i
         fd.append("description", form.description)
         fd.append("stock_qty", form.stock.toString())
         fd.append("discount", form.discount.toString())
-        if (form.category) fd.append("category", String(form.category))
+        // Normalize and append category as a primary key (accept numbers, strings, or objects)
+        if (form.category !== null && form.category !== undefined && form.category !== '') {
+            let catId: any = form.category
+            if (typeof catId === 'object' && catId !== null) {
+                // accept { id } or { pk } shapes from various backends
+                catId = (catId as any).id ?? (catId as any).pk ?? (catId as any).value ?? ''
+            }
+            const numId = Number(catId)
+            // Only append positive integer IDs (0 is usually a placeholder and backends may reject it)
+            if (Number.isInteger(numId) && numId > 0) {
+                if (import.meta.env.DEV) console.debug('ProductForm: appending category', numId)
+                fd.append('category', String(numId))
+            } else {
+                if (import.meta.env.DEV) console.debug('ProductForm: skipping invalid category value', catId)
+            }
+        }
         if (thumbnail) fd.append("thumbnail", thumbnail)
         if (model3d) fd.append("model_3d", model3d)
 

@@ -12,6 +12,7 @@ import Wishlist from './pages/WishList'
 const Profile = lazy(() => import('./pages/Profile'))
 const CategoryPage = lazy(() => import('./pages/category/CategoryPage'))
 const ProductDetail = lazy(() => import('./pages/Products/ProductDetail'))
+const ReportForm = lazy(() => import('./pages/ReportForm.tsx'))
 const Home = lazy(() => import('./pages/Home'))
 const Cart = lazy(() => import('./pages/Cart'))
 const Checkout = lazy(() => import('./pages/CheckOuts'))
@@ -34,6 +35,7 @@ function App() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/category/:categorySlug" element={<CategoryPage />} />
           <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/report" element={<ReportForm />} />
           <Route path="/help" element={<Help />} />
           <Route path="/cart" element={<Cart />} />
           <Route path='/wishlist' element={<Protected allow={['customer']}><Wishlist /></Protected>} />
