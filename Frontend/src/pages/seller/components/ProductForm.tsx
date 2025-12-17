@@ -305,7 +305,7 @@ export default function ProductForm({ onCreated, onUpdated, onCancel, product, i
         fd.append("stock_qty", form.stock.toString())
         fd.append("discount", form.discount.toString())
         // Normalize and append category as a primary key (accept numbers, strings, or objects)
-        if (form.category !== null && form.category !== undefined && form.category !== '') {
+        if (form.category !== null && form.category !== undefined && form.category !== 0) {
             let catId: any = form.category
             if (typeof catId === 'object' && catId !== null) {
                 // accept { id } or { pk } shapes from various backends

@@ -1,6 +1,6 @@
 // src/pages/Products/ProductDetailPage.tsx
 import { useParams, Link, useNavigate } from "react-router-dom"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
     Star,
@@ -69,11 +69,16 @@ export default function ProductDetailPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [currentImage, setCurrentImage] = useState(0)
+    const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right')
     const [show3D, setShow3D] = useState(false)
     const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
     const navigate = useNavigate()
     const [isWish, setIsWish] = useState(false)
+    const reviewListRef = useRef<any>(null)
     const [wishLoading, setWishLoading] = useState(false)
+    const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 })
+    const [showZoom, setShowZoom] = useState(false)
+    const imageRef = useRef<HTMLImageElement>(null)
 
     // report page navigation (replaces modal)
 
@@ -283,10 +288,61 @@ export default function ProductDetailPage() {
     })()
 
 
-    const handlePrev = () =>
+    const handlePrev = () => {
+        setSlideDirection('left')
         setCurrentImage((prev) => (prev - 1 + images.length) % images.length)
-    const handleNext = () =>
+    }
+    const handleNext = () => {
+        setSlideDirection('right')
         setCurrentImage((prev) => (prev + 1) % images.length)
+    }
+    const handleImageSelect = (index: number) => {
+        setSlideDirection(index > currentImage ? 'right' : 'left')
+        setCurrentImage(index)
+    }
+
+    const handleImageHover = (e: React.MouseEvent<HTMLImageElement>) => {
+        if (!imageRef.current) return
+        
+        const img = imageRef.current
+        const rect = img.getBoundingClientRect()
+        const x = e.clientX - rect.left
+        const y = e.clientY - rect.top
+        
+        // Get the actual displayed image dimensions (accounting for object-contain)
+        const naturalWidth = img.naturalWidth
+        const naturalHeight = img.naturalHeight
+        const displayWidth = img.offsetWidth
+        const displayHeight = img.offsetHeight
+        
+        // Calculate the aspect ratio and find actual image bounds
+        const naturalAspect = naturalWidth / naturalHeight
+        const displayAspect = displayWidth / displayHeight
+        
+        let imgLeft = 0, imgTop = 0, imgWidth = displayWidth, imgHeight = displayHeight
+        
+        if (naturalAspect > displayAspect) {
+            // Image is wider than container
+            imgHeight = displayWidth / naturalAspect
+            imgTop = (displayHeight - imgHeight) / 2
+        } else {
+            // Image is taller than container
+            imgWidth = displayHeight * naturalAspect
+            imgLeft = (displayWidth - imgWidth) / 2
+        }
+        
+        // Only show zoom if cursor is over the actual image
+        if (x >= imgLeft && x <= imgLeft + imgWidth && y >= imgTop && y <= imgTop + imgHeight) {
+            setZoomPosition({ x, y })
+            setShowZoom(true)
+        } else {
+            setShowZoom(false)
+        }
+    }
+
+    const handleImageLeave = () => {
+        setShowZoom(false)
+    }
 
     return (
         <motion.div
@@ -310,34 +366,54 @@ export default function ProductDetailPage() {
                 {/* 🔹 Product Section */}
                 <div className="mx-auto mt-8 max-w-7xl grid grid-cols-1 lg:grid-cols-3 gap-10 px-4 sm:px-6 lg:px-8">
                     {/* --- Left: Media --- */}
-                    <div className="lg:col-span-2 space-y-5 relative bg-white rounded-xl p-4 shadow-sm border">
+                    <div className="lg:col-span-2 space-y-5 relative bg-white rounded-xl p-4 shadow-sm border overflow-hidden">
                         <AnimatePresence mode="wait">
                             {!show3D ? (
-                                <div>
+                                <div className="overflow-hidden">
                                     <motion.div
-                                        key="images"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        transition={{ duration: 0.4 }}
+                                        key={`image-${currentImage}`}
+                                        initial={{ opacity: 0, x: slideDirection === 'right' ? 100 : -100 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: slideDirection === 'right' ? -100 : 100 }}
+                                        transition={{ duration: 0.4, ease: "easeInOut" }}
                                     >
-                                        <div className="relative">
+                                        <div className="relative h-[500px] bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden group">
                                             <img
+                                                ref={imageRef}
                                                 src={images[currentImage]}
                                                 alt={product.title}
-                                                className="rounded-lg object-cover w-full max-h-[480px] shadow-md"
+                                                className="h-full w-full object-contain shadow-md cursor-zoom-in"
+                                                onMouseMove={handleImageHover}
+                                                onMouseLeave={handleImageLeave}
                                             />
+                                            
+                                            {/* Zoom Magnifier */}
+                                            {showZoom && imageRef.current && (
+                                                <div
+                                                    className="absolute w-40 h-40 border-4 border-indigo-500 rounded-lg shadow-2xl pointer-events-none overflow-hidden z-50"
+                                                    style={{
+                                                        left: `${zoomPosition.x - 80}px`,
+                                                        top: `${zoomPosition.y - 80}px`,
+                                                        boxShadow: '0 0 30px rgba(99, 102, 241, 1), inset 0 0 15px rgba(99, 102, 241, 0.6), 0 0 60px rgba(99, 102, 241, 0.5)',
+                                                        backgroundImage: `url(${images[currentImage]})`,
+                                                        backgroundSize: `${imageRef.current.offsetWidth * 2.5}px ${imageRef.current.offsetHeight * 2.5}px`,
+                                                        backgroundPosition: `${-zoomPosition.x * 2.5 + 80}px ${-zoomPosition.y * 2.5 + 80}px`,
+                                                        backgroundRepeat: 'no-repeat',
+                                                    }}
+                                                />
+                                            )}
+
                                             {images.length > 1 && (
                                                 <>
                                                     <button
                                                         onClick={handlePrev}
-                                                        className="absolute top-1/2 left-3 bg-white/80 backdrop-blur-sm p-2 rounded-full hover:bg-white shadow"
+                                                        className="absolute top-1/2 left-3 bg-white/80 backdrop-blur-sm p-2 rounded-full hover:bg-white shadow z-10"
                                                     >
                                                         <ChevronLeft size={20} />
                                                     </button>
                                                     <button
                                                         onClick={handleNext}
-                                                        className="absolute top-1/2 right-3 bg-white/80 backdrop-blur-sm p-2 rounded-full hover:bg-white shadow"
+                                                        className="absolute top-1/2 right-3 bg-white/80 backdrop-blur-sm p-2 rounded-full hover:bg-white shadow z-10"
                                                     >
                                                         <ChevronRight size={20} />
                                                     </button>
@@ -356,10 +432,10 @@ export default function ProductDetailPage() {
                                                 {images.map((src, index) => (
                                                     <li key={`thumb-${index}`} className="mr-6">
                                                         <button
-                                                            className={`product-thumbnail ${index === 2 ? "border" : "" // Example: mark one as active
+                                                            className={`product-thumbnail ${index === currentImage ? "border-2 border-indigo-600" : "" // Mark current as active
                                                                 }`}
-                                                            onClick={() => setCurrentImage(index)}
-                                                            aria-current={index === 2 ? "true" : "false"}
+                                                            onClick={() => handleImageSelect(index)}
+                                                            aria-current={index === currentImage ? "true" : "false"}
                                                             aria-label={`Open image ${index + 1} (${product.title})`}
                                                         >
                                                             <figure
@@ -589,24 +665,27 @@ export default function ProductDetailPage() {
                 {/*   Custom Attributes */}
 
                 {attrs.length > 0 && (
-                    <div className="mt-6 pt-4 border-t space-y-2">
-                        <h3 className="font-semibold text-default text-sm uppercase tracking-wide">Specifications</h3>
-                        <div className="grid gap-2">
-                            {attrs.map((attr, idx) => (
-                                <div key={`attr-${idx}`} className="flex justify-between items-start p-2 rounded bg-black/5 dark:bg-white/5">
-                                    <span className="font-medium text-sm text-muted">{attr.key}</span>
-                                    <span className="text-sm text-default">{attr.value}</span>
-                                </div>
-                            ))}
+                    <div className="max-w-7xl mx-auto mt-12 px-4 sm:px-6 lg:px-8">
+                        <h3 className="font-semibold text-default text-lg uppercase tracking-wide mb-6">Specifications</h3>
+                        <div className="bg-white rounded-xl p-6 shadow-sm border overflow-x-auto">
+                            <table className="w-full">
+                                <tbody>
+                                    {attrs.map((attr, idx) => (
+                                        <tr key={`attr-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                            <td className="px-4 py-3 font-medium text-sm text-default border-b border-r">{attr.key}</td>
+                                            <td className="px-4 py-3 text-sm text-default border-b">{attr.value}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 )}
-                { }
                 <div className="max-w-7xl mx-auto mt-12 px-4 sm:px-6 lg:px-8">
                     <h2 className="text-2xl font-bold mb-4 text-gray-900">Customer Feedback</h2>
-                    <ReviewForm productId={Number(id)} />
+                    <ReviewForm productId={Number(id)} onPosted={() => reviewListRef.current?.fetchReviews()} />
                     <div className="mt-8">
-                        <ReviewList productId={Number(id)} />
+                        <ReviewList ref={reviewListRef} productId={Number(id)} />
                     </div>
                 </div>
             </div>
