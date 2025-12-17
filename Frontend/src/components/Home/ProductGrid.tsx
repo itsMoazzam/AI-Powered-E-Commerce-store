@@ -3,10 +3,12 @@ import { useEffect, useState, useRef, useCallback } from "react"
 import { Link } from "react-router-dom"
 import ProductCard from "./ProductCard"
 import AdCard from "./AdCard"
-import api from "../../lib/api"
+import api from "../../lib/api" // keep for product requests, but ad fetch uses public fetch
 import { demoProducts } from '../../lib/demoProducts'
 
 type Item = { type: 'product'; data: any } | { type: 'ad'; data: any }
+
+let adFetchWarningShown = false
 
 export default function ProductGrid() {
     const PAGE_SIZE = 25
@@ -22,20 +24,39 @@ export default function ProductGrid() {
 
     const fetchAds = useCallback(async () => {
         try {
-            // Try the less-ad-blocker-friendly endpoint first; fall back to legacy '/api/ads/'
+            // Use fetch (no auth headers) so ads are visible to guests and avoid axios auth redirect
             try {
-                const { data } = await api.get('/api/advertisements/?limit=50')
-                setAds(Array.isArray(data) ? data : [])
-                return
+                const res = await fetch('/api/advertisements/?limit=50')
+                if (res.ok) {
+                    const data = await res.json()
+                    setAds(Array.isArray(data) ? data : [])
+                    return
+                }
             } catch (e) {
-                // fallback to /api/ads/ for older servers
+                // fallback to legacy endpoint
             }
-            const { data } = await api.get('/api/ads/?limit=50')
-            setAds(Array.isArray(data) ? data : [])
+
+            try {
+                const res = await fetch('/api/ads/?limit=50')
+                if (res.ok) {
+                    const data = await res.json()
+                    setAds(Array.isArray(data) ? data : [])
+                    return
+                }
+            } catch (e) { }
+
+            // If we reach here, no ads available
+            setAds([])
         } catch (err) {
-            // If a client ad-blocker blocks requests to '/api/ads', the browser will show ERR_BLOCKED_BY_CLIENT.
-            // We swallow the error and skip ads (non-fatal), but log a hint for developers.
-            console.warn('Failed to load ads/advertisements (may be blocked by an ad blocker):', err)
+            const msg = String(err)
+            const isNetworkErr = msg.includes('ECONNREFUSED') || msg.includes('NetworkError') || msg.includes('ERR_FAILED') || msg.includes('ERR_BLOCKED_BY_CLIENT')
+            if (isNetworkErr && !adFetchWarningShown) {
+                adFetchWarningShown = true
+                console.warn('Ads fetch failed (network or proxy). Ads will be skipped for now. To enable ads, ensure backend is reachable or set VITE_API_BASE_URL in .env')
+            } else if (!isNetworkErr && import.meta.env.DEV && !adFetchWarningShown) {
+                adFetchWarningShown = true
+                console.warn('Failed to load ads/advertisements (may be blocked by an ad blocker):', err)
+            }
             setAds([])
         }
     }, [])
@@ -129,9 +150,9 @@ export default function ProductGrid() {
         )
 
     return (
-        <section className="px-4 md:px-10 py-10 bg-surface">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-default">✨ Latest Products</h2>
+        <section className="px-4 md:px-10  bg-surface">
+            <div className="flex justify-between items-center ">
+                <h2 className="text-2xl font-bold text-default pb-9">✨ Latest Products</h2>
                 <Link to="/search" className="text-primary hover:opacity-90 text-sm font-medium transition">View All →</Link>
             </div>
 

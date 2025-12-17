@@ -112,14 +112,31 @@ app.post('/api/orders/:id/cancel/', (req, res) => {
     return res.json({ success: true, order })
 })
 
-// Confirm received (customer) - marks order completed if it was paid
+// Confirm received (customer) - marks order completed if it was paid and schedules seller payout
 app.post('/api/orders/:id/confirm-received/', (req, res) => {
     const id = req.params.id
     const order = orders[id]
     if (!order) return res.status(404).json({ error: 'Order not found' })
     if (order.status !== 'paid') return res.status(400).json({ error: 'Only paid orders can be confirmed received' })
+
+    // Mark completed
     order.status = 'completed'
     order.completed_at = new Date().toISOString()
+
+    // Ensure seller ledger entry exists (demo ledger). Avoid duplicates by checking order_id.
+    const already = sellerBalances.find(e => e.order_id === order.id)
+    if (!already) {
+        const platformFee = Math.round((order.amount_cents || 0) * 0.05)
+        const sellerNet = (order.amount_cents || 0) - platformFee
+        const scheduled = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days
+        const sellerId = order.seller_id || 1 // demo: default seller id
+        const entry = { seller_id: sellerId, order_id: order.id, amount_gross: order.amount_cents || 0, platform_fee: platformFee, seller_net: sellerNet, payout_status: 'pending', scheduled_payout_date: scheduled.toISOString() }
+        sellerBalances.push(entry)
+        console.log(`Scheduled payout for order ${order.id} to seller ${sellerId} on ${scheduled.toISOString()}`)
+    } else {
+        console.log(`Seller ledger already exists for order ${order.id}`)
+    }
+
     return res.json({ success: true, order })
 })
 

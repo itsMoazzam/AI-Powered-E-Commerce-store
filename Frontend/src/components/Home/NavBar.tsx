@@ -8,7 +8,6 @@ import { useTheme } from '../../theme/ThemeProvider'
 import api from "../../lib/api";
 import { loadCartFromStorage, getCartStorageKey } from '../../lib/cart'
 import { RiCustomerService2Fill } from "react-icons/ri";
-
 type Category = {
     id: number;
     name: string;
@@ -56,7 +55,7 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
     const [notificationsOpen, setNotificationsOpen] = useState(false)
     const [notifications, setNotifications] = useState<any[]>([])
     const [topOpen, setTopOpen] = useState(false)
-    const [topSeller, setTopSeller] = useState<any>(null)
+    const [topSellers, setTopSellers] = useState<any[]>([])
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     const [suggestions, setSuggestions] = useState<any[]>([])
     const [showSuggestions, setShowSuggestions] = useState(false)
@@ -337,15 +336,36 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
 
     const handleTopClick = async () => {
         setTopOpen((s) => !s)
-        if (!topSeller) {
-            try {
-                const tres = await fetch('/api/sellers/top/')
-                if (!tres.ok) throw tres
+        if (topSellers.length > 0) return
+
+        // Try backend top sellers first; if unavailable or empty, fallback to advertisements
+        try {
+            const tres = await fetch('/api/sellers/top/')
+            if (tres.ok) {
                 const data = await tres.json()
-                setTopSeller(data)
-            } catch (err) {
-                setTopSeller({ name: 'Top Seller', rating: 4.9 })
+                if (Array.isArray(data) && data.length > 0) {
+                    setTopSellers(data)
+                    return
+                }
             }
+        } catch (err) {
+            // ignore — try fallback
+        }
+
+        try {
+            const ares = await fetch('/api/advertisements/?limit=100')
+            if (!ares.ok) throw ares
+            const ads = await ares.json()
+            const counts: Record<string, number> = {}
+            for (const ad of (Array.isArray(ads) ? ads : [])) {
+                if (ad && ad.seller_id) counts[String(ad.seller_id)] = (counts[String(ad.seller_id)] || 0) + 1
+            }
+            const sellers = Object.entries(counts).map(([id, cnt]) => ({ id: Number(id), name: `Seller ${id}`, count: cnt }))
+            sellers.sort((a: any, b: any) => b.count - a.count)
+            setTopSellers(sellers.slice(0, 8))
+        } catch (err) {
+            // As a last resort show a placeholder
+            setTopSellers([{ id: 0, name: 'Top Seller', count: 0 }])
         }
     }
 
@@ -433,9 +453,17 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                                 <Star size={20} />
                             </button>
                             {topOpen && (
-                                <div className="absolute right-0 top-full mt-2 w-56 border border-card rounded-md shadow-lg p-3" style={{ background: 'var(--surface)', zIndex: 9999 }}>
-                                    <div className="text-xs font-medium mb-2 text-muted">TOP SELLER</div>
-                                    <div className="text-sm text-default">{topSeller ? `${topSeller.name} — ${topSeller.rating}★` : 'Loading...'}</div>
+                                <div className="absolute right-0 top-full mt-2 w-64 border border-card rounded-md shadow-lg p-3" style={{ background: 'var(--surface)', zIndex: 9999 }}>
+                                    <div className="text-xs font-medium mb-2 text-muted">TOP SELLERS</div>
+                                    <div className="space-y-2 max-h-64 overflow-auto">
+                                        {topSellers.length === 0 && <div className="text-sm text-default">Loading...</div>}
+                                        {topSellers.map((s: any, i: number) => (
+                                            <div key={`topseller-${s.id || i}`} className="flex items-center justify-between text-sm">
+                                                <div className="truncate">{s.name || `Seller ${s.id}`}</div>
+                                                <div className="text-xs text-muted">{s.count ? `${s.count} ads` : ''}</div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -490,7 +518,9 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
 
                         {!user ? (
                             <>
-                                <button onClick={() => { setLoginAnchor && setLoginAnchor(null); setLoginModalOpen(true); }} className="text-sm hidden sm:inline inline-flex items-center justify-center cursor-pointer" style={{ color: 'var(--color-primary)' }}>Sign In</button>
+                                {/* <button onClick={() => { setLoginAnchor && setLoginAnchor(null); setLoginModalOpen(true); }} className="text-sm hidden sm:inline inline-flex items-center justify-center cursor-pointer" style={{ color: 'var(--color-primary)' }}>Sign In</button> */}
+                                <button onClick={() => { navigate('/auth/login') }} className="text-sm hidden sm:inline inline-flex items-center justify-center cursor-pointer" style={{ color: 'var(--color-primary)' }}>Sign In</button>
+
                                 <Link to="/register" className="text-sm hidden sm:inline" style={{ color: 'var(--color-primary)' }}>Sign Up</Link>
                             </>
                         ) : (
@@ -621,7 +651,7 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                                 onChange={(e) => {
                                     const q = e.target.value
                                     setSearchQuery(q)
-                                    // Debounce/throttle suggestions to 2s
+                                    // Debounce/throttle suggestions to 1.5s and present short 2-3 word snippets
                                     if (suggestionTimer.current) clearTimeout(suggestionTimer.current)
                                     suggestionTimer.current = setTimeout(async () => {
                                         try {
@@ -635,7 +665,7 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                                             const sdata = await sres.json()
                                             const list = sdata?.results ?? sdata ?? []
 
-                                            // Build phrase suggestions from titles, descriptions and categories
+                                            // Build small phrase snippets (2-3 words) from titles/descriptions/categories
                                             const phrases: string[] = []
                                             for (const p of (Array.isArray(list) ? list : [])) {
                                                 if (p.title) phrases.push(String(p.title))
@@ -654,11 +684,6 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                                                         else if (c.name) phrases.push(String(c.name))
                                                     }
                                                 }
-                                                if (p.title) {
-                                                    for (const w of String(p.title).split(/\s+/)) {
-                                                        if (w.length > 2) phrases.push(w)
-                                                    }
-                                                }
                                             }
 
                                             const freq = new Map<string, number>()
@@ -667,13 +692,23 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
                                                 if (!normalized) return
                                                 freq.set(normalized, (freq.get(normalized) ?? 0) + 1)
                                             })
-                                            const sorted = Array.from(freq.entries()).sort((a, b) => b[1] - a[1]).map(([k]) => k).slice(0, 12)
-                                            setSuggestions(sorted)
+
+                                            // Take the most frequent and truncate to 3 words, dedupe
+                                            const sorted = Array.from(freq.entries()).sort((a, b) => b[1] - a[1]).map(([k]) => k)
+                                            const snippets: string[] = []
+                                            const mkSnippet = (s: string) => s.split(/\s+/).slice(0, 3).join(' ')
+                                            for (const s of sorted) {
+                                                const sn = mkSnippet(s)
+                                                if (!sn) continue
+                                                if (!snippets.includes(sn)) snippets.push(sn)
+                                                if (snippets.length >= 12) break
+                                            }
+                                            setSuggestions(snippets)
                                             setShowSuggestions(true)
                                         } catch (err) {
                                             setSuggestions([])
                                         }
-                                    }, 2000)
+                                    }, 1500)
                                 }}
                                 onFocus={() => setShowSuggestions(true)}
                                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
@@ -693,11 +728,11 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
 
                             {/* Suggestions dropdown (phrases) */}
                             {showSuggestions && suggestions.length > 0 && (
-                                <div className="absolute left-0 right-0 mt-14 max-h-64 overflow-auto bg-surface border border-card rounded shadow-lg" style={{ zIndex: 9999 }}>
+                                <div className="absolute left-0 right-0 top-full max-h-content overflow-auto-hidden bg-blue-50 border border-card rounded shadow-lg" style={{ zIndex: 9999, pointerEvents: 'auto', borderRadius: '5%' }}>
                                     <ul>
                                         {suggestions.map((s: any, i: number) => (
                                             <li key={`sug-${i}`} className="px-3 py-2 hover:bg-black/5">
-                                                <button className="w-full text-left" onClick={() => { setSearchQuery(s); window.location.href = `/search?query=${encodeURIComponent(s)}`; }}>{s}</button>
+                                                <button className="w-full text-left" onMouseDown={() => { setSearchQuery(s); window.location.href = `/search?query=${encodeURIComponent(s)}`; }}>{s}</button>
                                             </li>
                                         ))}
                                     </ul>
