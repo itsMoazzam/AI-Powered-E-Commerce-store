@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../lib/api'
 import analytics from '../../lib/analytics'
+import { demoProducts } from '../../lib/demoProducts'
 
 interface RecItem {
     id: number
@@ -44,15 +45,22 @@ export default function Recommended({ limit = 12 }: { limit?: number }) {
                 }
             } catch (err) {
                 console.error('Failed to load recommendations', err)
-                setMessage('Recommendations unavailable')
+                // If backend is unreachable (dev proxy down), fall back to demo data so UI remains useful
+                setMessage('Recommendations unavailable — showing demo data')
                 try {
-                    // attempt popular as fallback
+                    // try popular endpoint first
                     const pres = await fetch(`/api/recommendations/popular/?top_k=${limit}`)
                     if (pres.ok) {
                         const pdata = await pres.json()
                         setItems(Array.isArray(pdata) ? pdata : (pdata?.results ?? []))
-                    } else setItems([])
-                } catch (e) { setItems([]) }
+                    } else {
+                        // fallback to bundled demo products
+                        setItems(demoProducts.slice(0, limit) as any)
+                    }
+                } catch (e) {
+                    // final fallback: bundled demo products
+                    setItems(demoProducts.slice(0, limit) as any)
+                }
             } finally {
                 if (mounted) setLoading(false)
             }

@@ -13,7 +13,6 @@ import {
     Layers,
     Ruler,
 } from "lucide-react"
-import ReportModal from "../../components/ReportModal"
 import { Heart } from 'lucide-react'
 import api from "../../lib/api"
 import { addToCart } from '../../lib/cart'
@@ -76,9 +75,7 @@ export default function ProductDetailPage() {
     const [isWish, setIsWish] = useState(false)
     const [wishLoading, setWishLoading] = useState(false)
 
-    // report modal state
-    const [reportSellerOpen, setReportSellerOpen] = useState(false)
-    const [reportProductOpen, setReportProductOpen] = useState(false)
+    // report page navigation (replaces modal)
 
     useEffect(() => {
         let mounted = true
@@ -427,11 +424,48 @@ export default function ProductDetailPage() {
                                         <Store size={14} /> {product.seller.name}
                                     </span>
                                 </div>
-                                <div>
+                                {/* <div>
                                     <button
-                                        onClick={() => setReportSellerOpen(true)}
+                                        onClick={() => navigate(`/report?type=seller&targetId=${product.seller?.id ?? ''}&targetName=${encodeURIComponent(product.seller?.name ?? '')}`)}
                                         className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 border border-red-100 hover:bg-red-100"
                                     >Report Seller</button>
+
+                                </div> */}
+                                <div className="mt-3 md:mt-0 flex items-center gap-2">
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                setWishLoading?.(true)
+                                            } catch { }
+                                            try {
+                                                const raw = localStorage.getItem('intelligentCommerce_wishlist')
+                                                const arr = raw ? JSON.parse(raw) : []
+                                                const currently = Array.isArray(arr) ? arr.includes(product.id) : false
+                                                if (currently) {
+                                                    await removeFromWishlist(product.id)
+                                                    setIsWish?.(false)
+                                                } else {
+                                                    await addToWishlist(product.id)
+                                                    setIsWish?.(true)
+                                                    try { analytics.recordInteraction(product.id, 'wishlist', { action: 'add' }) } catch { }
+                                                }
+                                            } catch (err: any) {
+                                                console.error('Wishlist error', err)
+                                                if (err?.message && err.message.indexOf('Only customers') >= 0) {
+                                                    navigate('/auth/login')
+                                                } else {
+                                                    alert(err?.message || 'Failed to update wishlist')
+                                                }
+                                            } finally {
+                                                try { setWishLoading?.(false) } catch { }
+                                            }
+                                        }}
+                                        className={`p-2 rounded-full border ${isWish ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white text-default'} transition`} aria-pressed={isWish} disabled={wishLoading} title={isWish ? 'Remove from wishlist' : 'Add to wishlist'}
+                                    >
+                                        <Heart size={18} />
+                                    </button>
+
+                                    <button onClick={() => navigate(`/report?type=product&targetId=${product.id}&targetName=${encodeURIComponent(product.title)}`)} className="px-3 py-2 rounded-lg border text-sm text-red-600 hover:bg-red-50">Report</button>
                                 </div>
                             </div>
                         )}
@@ -486,111 +520,65 @@ export default function ProductDetailPage() {
                             )}
                         </div>
 
-                        {/*   Custom Attributes */}
 
-                        {attrs.length > 0 && (
-                            <div className="mt-6 pt-4 border-t space-y-2">
-                                <h3 className="font-semibold text-default text-sm uppercase tracking-wide">Specifications</h3>
-                                <div className="grid gap-2">
-                                    {attrs.map((attr, idx) => (
-                                        <div key={`attr-${idx}`} className="flex justify-between items-start p-2 rounded bg-black/5 dark:bg-white/5">
-                                            <span className="font-medium text-sm text-muted">{attr.key}</span>
-                                            <span className="text-sm text-default">{attr.value}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
 
-                        <div className="mt-6 flex gap-3">
-                            <button
-                                onClick={() => {
-                                    // Add to cart (local storage only - no API call)
-                                    const role = localStorage.getItem('role')
-                                    if (role !== 'customer') {
-                                        // redirect guests to login
-                                        navigate('/auth/login')
-                                        return
-                                    }
-
-                                    // Add to localStorage cart
-                                    try {
-                                        addToCart({
-                                            id: product.id,
-                                            title: product.title,
-                                            thumbnail: product.thumbnail,
-                                            price: Number(product.price),
-                                            seller: product.seller
-                                        })
-
-                                        alert(`✅ Added "${product.title}" to cart!`)
-                                        // Optionally navigate to cart to show updated items
-                                        navigate(`/cart?added=${product.id}`)
-                                    } catch (err: any) {
-                                        console.error('Failed to add to cart', err)
-                                        alert(err?.message || 'Failed to add to cart')
-                                    }
-                                }}
-                                className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium shadow-sm transition"
-                            >
-                                Add to Cart
-                            </button>
-
-                            <button
-                                onClick={async () => {
-                                    const role = localStorage.getItem('role')
-                                    if (role !== 'customer') {
-                                        navigate('/auth/login')
-                                        return
-                                    }
-                                    try {
-                                        // don't necessarily add to persistent cart; navigate to checkout with product prefilled
-                                        navigate(`/checkout?product=${product.id}&qty=1`)
-                                    } catch (err) {
-                                        console.error('Buy now failed', err)
-                                        alert('Failed to proceed to checkout')
-                                    }
-                                }}
-                                className="flex-1 bg-gray-100 text-gray-900 py-2 rounded-lg border hover:bg-gray-200 font-medium transition"
-                            >
-                                Buy Now
-                            </button>
-
-                            {/* Wishlist toggle */}
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        setWishLoading?.(true)
-                                    } catch { }
-                                    try {
-                                        const raw = localStorage.getItem('intelligentCommerce_wishlist')
-                                        const arr = raw ? JSON.parse(raw) : []
-                                        const currently = Array.isArray(arr) ? arr.includes(product.id) : false
-                                        if (currently) {
-                                            await removeFromWishlist(product.id)
-                                            setIsWish?.(false)
-                                        } else {
-                                            await addToWishlist(product.id)
-                                            setIsWish?.(true)
-                                            try { analytics.recordInteraction(product.id, 'wishlist', { action: 'add' }) } catch { }
-                                        }
-                                    } catch (err: any) {
-                                        console.error('Wishlist error', err)
-                                        if (err?.message && err.message.indexOf('Only customers') >= 0) {
+                        <div className="mt-6 flex flex-col md:flex-row md:items-center md:gap-3">
+                            <div className="flex gap-3 flex-1">
+                                <button
+                                    onClick={() => {
+                                        // Add to cart (local storage only - no API call)
+                                        const role = localStorage.getItem('role')
+                                        if (role !== 'customer') {
+                                            // redirect guests to login
                                             navigate('/auth/login')
-                                        } else {
-                                            alert(err?.message || 'Failed to update wishlist')
+                                            return
                                         }
-                                    } finally {
-                                        try { setWishLoading?.(false) } catch { }
-                                    }
-                                }}
-                                className={`p-2 rounded-lg border ${isWish ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white text-default'} transition`} aria-pressed={isWish} disabled={wishLoading} title={isWish ? 'Remove from wishlist' : 'Add to wishlist'}
-                            >
-                                <Heart size={18} />
-                            </button>
 
-                            <button onClick={() => setReportProductOpen(true)} className="px-3 py-2 rounded-lg border text-sm text-red-600 hover:bg-red-50">Report Product</button>
+                                        // Add to localStorage cart
+                                        try {
+                                            addToCart({
+                                                id: product.id,
+                                                title: product.title,
+                                                thumbnail: product.thumbnail,
+                                                price: Number(product.price),
+                                                seller: product.seller
+                                            })
+
+                                            alert(`✅ Added "${product.title}" to cart!`)
+                                            // Optionally navigate to cart to show updated items
+                                            navigate(`/cart?added=${product.id}`)
+                                        } catch (err: any) {
+                                            console.error('Failed to add to cart', err)
+                                            alert(err?.message || 'Failed to add to cart')
+                                        }
+                                    }}
+                                    className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium shadow-sm transition"
+                                >
+                                    Add to Cart
+                                </button>
+
+                                <button
+                                    onClick={async () => {
+                                        const role = localStorage.getItem('role')
+                                        if (role !== 'customer') {
+                                            navigate('/auth/login')
+                                            return
+                                        }
+                                        try {
+                                            // don't necessarily add to persistent cart; navigate to checkout with product prefilled
+                                            navigate(`/checkout?product=${product.id}&qty=1`)
+                                        } catch (err) {
+                                            console.error('Buy now failed', err)
+                                            alert('Failed to proceed to checkout')
+                                        }
+                                    }}
+                                    className="flex-1 bg-gray-100 text-gray-900 py-2 rounded-lg border hover:bg-gray-200 font-medium transition"
+                                >
+                                    Buy Now
+                                </button>
+                            </div>
+
+
                         </div>
 
                         <p className="mt-6 text-gray-700 text-sm leading-relaxed border-t pt-4 whitespace-pre-line break-words">
@@ -598,8 +586,22 @@ export default function ProductDetailPage() {
                         </p>
                     </div>
                 </div>
+                {/*   Custom Attributes */}
 
-                {/* Reviews */}
+                {attrs.length > 0 && (
+                    <div className="mt-6 pt-4 border-t space-y-2">
+                        <h3 className="font-semibold text-default text-sm uppercase tracking-wide">Specifications</h3>
+                        <div className="grid gap-2">
+                            {attrs.map((attr, idx) => (
+                                <div key={`attr-${idx}`} className="flex justify-between items-start p-2 rounded bg-black/5 dark:bg-white/5">
+                                    <span className="font-medium text-sm text-muted">{attr.key}</span>
+                                    <span className="text-sm text-default">{attr.value}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                { }
                 <div className="max-w-7xl mx-auto mt-12 px-4 sm:px-6 lg:px-8">
                     <h2 className="text-2xl font-bold mb-4 text-gray-900">Customer Feedback</h2>
                     <ReviewForm productId={Number(id)} />
@@ -609,9 +611,7 @@ export default function ProductDetailPage() {
                 </div>
             </div>
 
-            {/* Report modals */}
-            <ReportModal isOpen={reportSellerOpen} onClose={() => setReportSellerOpen(false)} targetType="seller" targetId={product.seller?.id ?? 0} targetName={product.seller?.name} />
-            <ReportModal isOpen={reportProductOpen} onClose={() => setReportProductOpen(false)} targetType="product" targetId={product.id} targetName={product.title} />
+
 
             {/* Related products */}
             {relatedProducts.length > 0 && (
