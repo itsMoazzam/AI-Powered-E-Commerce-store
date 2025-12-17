@@ -43,11 +43,19 @@ export default function ProductForm({ onCreated, onUpdated, onCancel, product, i
 
     useEffect(() => {
         if (existing) {
+            // Ensure category is always a number (ID), not a string (name)
+            let categoryValue = existing.category || 0
+            if (typeof categoryValue === 'string') {
+                // If it's a string, try to convert to number if it's numeric
+                const parsed = parseInt(categoryValue, 10)
+                categoryValue = isNaN(parsed) ? 0 : parsed
+            }
+            
             setForm({
                 title: existing.title || "",
                 price: String(existing.price ?? ""),
                 description: existing.description || "",
-                category: existing.category || 0,
+                category: categoryValue,
                 stock: existing.stock_qty ?? existing.stock ?? 0,
                 discount: existing.discount ?? 0,
             })
@@ -179,12 +187,19 @@ export default function ProductForm({ onCreated, onUpdated, onCancel, product, i
                     const data = productData
 
                     // Merge fetched data into form fields (preserve existing values when missing)
+                    // Ensure category is always a number (ID), not a string (name)
+                    let categoryValue = data.category ?? 0
+                    if (typeof categoryValue === 'string') {
+                        const parsed = parseInt(categoryValue, 10)
+                        categoryValue = isNaN(parsed) ? 0 : parsed
+                    }
+                    
                     setForm((prev) => ({
                         ...prev,
                         title: data.title ?? prev.title,
                         price: String(data.price ?? prev.price ?? ""),
                         description: data.description ?? prev.description,
-                        category: data.category ?? prev.category,
+                        category: categoryValue,
                         stock: data.stock_qty ?? data.stock ?? prev.stock,
                         discount: data.discount ?? prev.discount,
                     }))
