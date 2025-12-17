@@ -1,11 +1,14 @@
 // src/components/ProductCard.tsx
 import { Link, useNavigate } from "react-router-dom"
+import React, { useEffect, useState } from 'react'
 import { motion } from "framer-motion"
-import { Star } from "lucide-react"
+import { Star, Heart } from "lucide-react"
 import api from "../../lib/api"
 import { useDispatch } from 'react-redux'
 import { fetchCart } from '../../store/Cart'
 import { addToCart } from '../../lib/cart'
+import { addToWishlist, removeFromWishlist } from '../../lib/wishlist'
+import analytics from '../../lib/analytics'
 
 interface Product {
     id: number
@@ -26,21 +29,43 @@ export default function ProductCard({
 }) {
     const dispatch = useDispatch()
     const navigate = useNavigate()
+    const [isWish, setIsWish] = useState(false)
+    const [wishLoading, setWishLoading] = useState(false)
+
+    useEffect(() => {
+        let mounted = true
+        try {
+            const raw = localStorage.getItem('intelligentCommerce_wishlist')
+            const arr = raw ? JSON.parse(raw) : []
+            if (mounted && Array.isArray(arr)) setIsWish(arr.includes(product.id))
+        } catch (e) {
+            // ignore
+        }
+
+        const onUpdated = (ev: Event) => {
+            try {
+                const detail: any = (ev as CustomEvent).detail
+                if (Array.isArray(detail)) setIsWish(detail.includes(product.id))
+            } catch (e) { }
+        }
+        window.addEventListener('intelligentCommerce_wishlist_updated', onUpdated as EventListener)
+        return () => { mounted = false; window.removeEventListener('intelligentCommerce_wishlist_updated', onUpdated as EventListener) }
+    }, [product.id])
     return (
         <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="bg-surface rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-card"
+            className="bg-surface rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-card "
         >
             {/* Image and link */}
             <div>
-                <Link to={`/product/${product.id}`}>
+                <Link to={`/product/${product.id}`} onClick={() => { try { analytics.recordInteraction(product.id, 'view') } catch { } }}>
                     <div className="relative">
                         <img
                             src={product.thumbnail}
                             alt={product.title}
-                            className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-115"
                             loading="lazy"
                         />
                         {product.discount && (
@@ -53,11 +78,46 @@ export default function ProductCard({
                                 3D
                             </span>
                         )}
+
+                        {/* Wishlist toggle */}
+                        <button
+                            title={isWish ? 'Remove from wishlist' : 'Add to wishlist'}
+                            onClick={async (e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                if (wishLoading) return
+                                setWishLoading(true)
+                                try {
+                                    if (isWish) {
+                                        await removeFromWishlist(product.id)
+                                        setIsWish(false)
+                                        try { analytics.recordInteraction(product.id, 'wishlist', { action: 'remove' }) } catch { }
+                                    } else {
+                                        await addToWishlist(product.id)
+                                        setIsWish(true)
+                                        try { analytics.recordInteraction(product.id, 'wishlist', { action: 'add' }) } catch { }
+                                    }
+                                } catch (err: any) {
+                                    console.error('Wishlist error', err)
+                                    if (err?.message && err.message.indexOf('Only customers') >= 0) {
+                                        alert('Only customers can use the wishlist. Please sign in as a customer.')
+                                        navigate('/auth/login')
+                                    } else {
+                                        alert(err?.message || 'Failed to update wishlist')
+                                    }
+                                } finally {
+                                    setWishLoading(false)
+                                }
+                            }}
+                            className={`absolute top-2 right-2 p-2 rounded-full bg-white/90 shadow transition ${isWish ? 'text-red-500' : 'text-gray-600'} disabled:opacity-60`} aria-pressed={isWish} disabled={wishLoading}
+                        >
+                            <Heart size={16} />
+                        </button>
                     </div>
                 </Link>
 
                 {/* Info */}
-                <div className="p-4 space-y-1">
+                <div className="p-4 space-y-1 bg-blue-50">
                     <Link to={`/product/${product.id}`} className="block">
                         <h3 className="font-semibold text-default line-clamp-1">
                             {product.title}
@@ -91,6 +151,7 @@ export default function ProductCard({
                                 // Local-first add (only customers allowed)
                                 addToCart({ id: product.id, title: product.title, thumbnail: product.thumbnail, price: Number(product.price), seller: undefined })
                                 try { dispatch(fetchCart() as any) } catch { }
+                                try { analytics.recordInteraction(product.id, 'cart') } catch { }
                                 navigate(`/cart?added=${product.id}`)
                             } catch (err: any) {
                                 console.error('Add to cart failed', err)

@@ -120,12 +120,7 @@ export default function ProductGrid({
             </section>
         )
 
-    if (!products.length)
-        return (
-            <section className="px-4 md:px-10 py-16 bg-surface text-center text-muted">
-                No products found.
-            </section>
-        )
+
 
     return (
         <div className="md:flex relative min-h-screen">
@@ -140,9 +135,13 @@ export default function ProductGrid({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                    {products.map((product, index) => (
-                        <ProductCard key={product.id || index} product={product as any} index={index} />
-                    ))}
+                    {products.length === 0 ? (
+                        <div className="col-span-full text-center text-muted py-12">No products match these filters in the selected range.</div>
+                    ) : (
+                        products.map((product, index) => (
+                            <ProductCard key={product.id || index} product={product as any} index={index} />
+                        ))
+                    )}
                 </div>
 
                 <div className="mt-8 pb-20 md:pb-0"> {/* Added padding bottom for mobile to account for filter button */}

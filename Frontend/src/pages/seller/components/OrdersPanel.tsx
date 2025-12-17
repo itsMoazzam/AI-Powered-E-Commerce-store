@@ -52,6 +52,37 @@ export default function OrdersPanel() {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<number | null>(null)
 
+  // normalize an incoming order shape into the UI Order
+  const normalizeOrder = (item: any): Order => ({
+    id: item.id,
+    status: item.status,
+    // prefer customer profile full name, fall back to other name fields
+    customer:
+      item.customer?.profile?.full_name ??
+      item.customer?.full_name ??
+      item.customer?.name ??
+      item.customer_name ??
+      item.buyer?.profile?.full_name ??
+      item.buyer?.full_name ??
+      item.buyer_name ??
+      item.user?.profile?.full_name ??
+      item.user?.name ??
+      item.shipping?.name ??
+      undefined,
+    total:
+      typeof item.final_total === 'string'
+        ? parseFloat(item.final_total)
+        : typeof item.final_total === 'number'
+          ? item.final_total
+          : typeof item.total === 'string'
+            ? parseFloat(item.total)
+            : typeof item.total === 'number'
+              ? item.total
+              : undefined,
+    updated_at: item.updated_at ?? item.updated ?? item.created ?? undefined,
+    location: item.location
+  })
+
   const fetchOrders = async () => {
     setLoading(true)
     setError(null)
@@ -59,8 +90,23 @@ export default function OrdersPanel() {
       const { start, end } = startEndFor(period, customStart, customEnd)
       const params: Record<string, string> = { start, end }
       if (statusFilter && statusFilter !== 'all') params.status = statusFilter
-      const { data } = await api.get('/api/seller/orders/', { params })
-      setOrders(Array.isArray(data) ? data : [])
+
+      const resp = await api.get('/api/seller/orders/', { params })
+      const data = resp.data
+
+      console.debug('Orders API response shape:', data)
+
+      const rawList = Array.isArray(data)
+        ? data
+        : Array.isArray(data.orders)
+          ? data.orders
+          : Array.isArray(data.results)
+            ? data.results
+            : []
+
+      const list = rawList.map((item: any) => normalizeOrder(item))
+
+      setOrders(list)
     } catch (err) {
       console.error('Failed to load orders', err)
       setError('Failed to load orders')
@@ -86,15 +132,26 @@ export default function OrdersPanel() {
         }
 
         ws.onmessage = (ev) => {
+          console.debug('Orders WS message:', ev.data)
           try {
             const payload = JSON.parse(ev.data)
-            if (payload?.type === 'order_update' && payload.order) {
+            const type = (payload.type || '').toLowerCase()
+            const order = payload.order || payload.data?.order || payload
+
+            if (type.includes('order') && (type.includes('create') || type.includes('created'))) {
+              fetchOrders()
+              return
+            }
+
+            if (order) {
+              const normalized = normalizeOrder(order)
               setOrders((prev) => {
-                const found = prev.find((o) => o.id === payload.order.id)
+                const oid = String(normalized.id)
+                const found = prev.find((o) => String(o.id) === oid)
                 if (found) {
-                  return prev.map((o) => (o.id === payload.order.id ? { ...o, ...payload.order } : o))
+                  return prev.map((o) => (String(o.id) === oid ? { ...o, ...normalized } : o))
                 }
-                return [payload.order, ...prev]
+                return [normalized, ...prev]
               })
             }
           } catch (err) {

@@ -32,6 +32,8 @@ export default function ProductForm({ onCreated, onUpdated, onCancel, product, i
     >([])
 
     const [videos, setVideos] = useState<File[]>([])
+    const [prefetchModel3dUrl, setPrefetchModel3dUrl] = useState<string | null>(null)
+    const [prefetchVideos, setPrefetchVideos] = useState<string[]>([])
     const [customFields, setCustomFields] = useState([{ key: "", value: "" }])
     const [loading, setLoading] = useState(false)
 
@@ -65,8 +67,208 @@ export default function ProductForm({ onCreated, onUpdated, onCancel, product, i
                 if (existing.images_urls) arr.push(...existing.images_urls.map((u: string) => ({ url: u, alt_text: "", is_primary: false, file: null, removed: false })))
                 if (arr.length) setImages(arr)
             }
+
+            // Fallback: try other common gallery fields and include thumbnail as an image slot so edit UI always shows media
+            (function includeAdditionalImageSources() {
+                const arr: any[] = []
+
+                const pushUrl = (u: string | null | undefined, idx = 0) => {
+                    if (!u) return
+                    arr.push({ url: u, alt_text: '', is_primary: arr.length === 0, file: null, removed: false })
+                }
+
+                // common alternative fields that backends sometimes use
+                if (existing.media && Array.isArray((existing as any).media)) {
+                    (existing as any).media.forEach((m: any) => pushUrl(typeof m === 'string' ? m : m.url))
+                }
+                if (existing.gallery && Array.isArray((existing as any).gallery)) {
+                    (existing as any).gallery.forEach((m: any) => pushUrl(typeof m === 'string' ? m : m.url))
+                }
+                if (existing.photos && Array.isArray((existing as any).photos)) {
+                    (existing as any).photos.forEach((m: any) => pushUrl(typeof m === 'string' ? m : m.url))
+                }
+                if (existing.photo_urls && Array.isArray((existing as any).photo_urls)) {
+                    (existing as any).photo_urls.forEach((u: string) => pushUrl(u))
+                }
+
+                // always include thumbnail as first image if present and nothing else exists
+                if (arr.length === 0 && (existing.thumbnail || existing.image)) {
+                    pushUrl(existing.thumbnail || existing.image)
+                }
+
+                if (arr.length && images.length === 0) {
+                    setImages(arr)
+                }
+            })()
+
+            // Normalize custom attributes from common fields (attributes, specs, custom_attributes, meta, etc.)
+            const normalizeAttributes = (attrs: any): { key: string; value: string }[] => {
+                if (!attrs) return []
+                try {
+                    let data = attrs
+                    if (typeof attrs === 'string') data = JSON.parse(attrs)
+                    if (Array.isArray(data)) {
+                        return data.map((item: any) => {
+                            if (typeof item === 'string') {
+                                const [k, v] = item.split(":").map((s: string) => s.trim())
+                                return { key: k || item, value: v || "" }
+                            }
+                            if (typeof item === 'object' && item !== null) {
+                                const key = item.key ?? item.name ?? item.label ?? Object.keys(item)[0]
+                                const value = item.value ?? item.val ?? item.v ?? item[key] ?? ""
+                                return { key: String(key), value: String(value ?? "") }
+                            }
+                            return { key: String(item), value: "" }
+                        }).filter(Boolean)
+                    }
+                    if (typeof data === 'object' && data !== null) {
+                        return Object.entries(data).map(([k, v]) => ({ key: k, value: v === null || v === undefined ? '' : String(v) }))
+                    }
+                } catch (err) {
+                    console.warn('Failed to parse attributes for edit form', err)
+                }
+                return []
+            }
+
+            const attrs = normalizeAttributes((existing as any).attributes || (existing as any).specs || (existing as any).specifications || (existing as any).custom_attributes || (existing as any).custom_attributes_json || (existing as any).meta || (existing as any).metadata || {})
+
+            if (attrs && attrs.length > 0) {
+                setCustomFields(attrs.map(a => ({ key: a.key, value: a.value })))
+            }
         }
     }, [existing])
+
+    // If editing but the list-provided `existing` object lacks images/attributes, fetch full details
+
+    useEffect(() => {
+        let mounted = true
+        // If the list item only provides a single/top-level image (or none), fetch full product details
+        // so the edit form can show the full gallery. We consider 2+ images as 'has gallery already'.
+        const existingImageCount = (() => {
+            if (!existing) return 0
+            if (Array.isArray((existing as any).images)) return (existing as any).images.length
+            if (Array.isArray((existing as any).images_urls)) return (existing as any).images_urls.length
+            if ((existing as any).image || (existing as any).thumbnail) return 1
+            return 0
+        })()
+        const needsFetch = editing && existing && (existing as any).id && existingImageCount < 2
+        if (!needsFetch) return
+
+            ; (async () => {
+                try {
+                    // Try public product endpoint first (sometimes contains richer media/attributes)
+                    let productData: any = null
+                    try {
+                        const publicRes = await api.get(`/api/products/${(existing as any).id}/`)
+                        productData = publicRes.data
+                    } catch (e) {
+                        // ignore — try seller endpoint next
+                    }
+
+                    if (!productData) {
+                        try {
+                            const sellerRes = await api.get(`/api/seller/products/${(existing as any).id}/`)
+                            productData = sellerRes.data
+                        } catch (e) {
+                            console.warn('Product detail fetch failed for edit mode', e)
+                        }
+                    }
+
+                    if (!mounted || !productData) return
+
+                    const data = productData
+
+                    // Merge fetched data into form fields (preserve existing values when missing)
+                    setForm((prev) => ({
+                        ...prev,
+                        title: data.title ?? prev.title,
+                        price: String(data.price ?? prev.price ?? ""),
+                        description: data.description ?? prev.description,
+                        category: data.category ?? prev.category,
+                        stock: data.stock_qty ?? data.stock ?? prev.stock,
+                        discount: data.discount ?? prev.discount,
+                    }))
+
+                    // Thumbnail
+                    setExistingThumbnailUrl(data.thumbnail || data.image || existing.thumbnail || null)
+
+                    // Model 3D detection (like ProductDetail)
+                    const detect3DModel = (d: any): string | null => {
+                        const allUrls: string[] = []
+                        if (d.model_3d) allUrls.push(d.model_3d)
+                        if (d.model3d) allUrls.push(d.model3d)
+                        if (d.three_d_model) allUrls.push(d.three_d_model)
+                        if (Array.isArray(d.images)) allUrls.push(...d.images)
+                        if (Array.isArray(d.videos)) allUrls.push(...d.videos.map((v: any) => v.video))
+                        const match = allUrls.find((url) => typeof url === "string" && url.match(/\.(glb|gltf)$/i))
+                        return match || null
+                    }
+
+                    const m3 = detect3DModel(data)
+                    if (m3) setPrefetchModel3dUrl(m3)
+                    // Videos
+                    if (Array.isArray(data.videos)) setPrefetchVideos(data.videos.map((v: any) => v.preview_image || v.video).filter(Boolean))
+
+                    // assemble images robustly from a variety of shapes
+                    const imgs: any[] = []
+                    if (Array.isArray(data.images) && data.images.length > 0) {
+                        data.images.forEach((img: any, idx: number) => {
+                            if (typeof img === 'string') imgs.push({ url: img, alt_text: '', is_primary: idx === 0, file: null, removed: false })
+                            else if (img && typeof img === 'object') imgs.push({ url: img.url || img.image || img.path || '', alt_text: img.alt_text || img.alt || '', is_primary: !!img.is_primary || idx === 0, file: null, removed: false })
+                        })
+                    }
+                    if (data.image && imgs.length === 0) imgs.push({ url: data.image, alt_text: '', is_primary: true, file: null, removed: false })
+                    if (data.images_urls && Array.isArray(data.images_urls)) imgs.push(...data.images_urls.map((u: string) => ({ url: u, alt_text: '', is_primary: false, file: null, removed: false })))
+
+                    // ensure at least thumbnail is present
+                    if (imgs.length === 0 && (data.thumbnail || data.image || existing.thumbnail)) {
+                        const u = data.thumbnail || data.image || existing.thumbnail
+                        imgs.push({ url: u, alt_text: '', is_primary: true, file: null, removed: false })
+                    }
+
+                    if (imgs.length) setImages(imgs)
+
+                    // Normalize attributes from fetched details — same approach as ProductDetail
+                    const normalizeAttributes = (attrs: any): { key: string; value: string }[] => {
+                        if (!attrs) return []
+                        try {
+                            let d = attrs
+                            if (typeof attrs === 'string') d = JSON.parse(attrs)
+
+                            if (Array.isArray(d)) {
+                                return d.map((item: any) => {
+                                    if (typeof item === 'string') {
+                                        const [k, v] = item.split(":").map((s: string) => s.trim())
+                                        return { key: k || item, value: v || "" }
+                                    }
+                                    if (typeof item === 'object' && item !== null) {
+                                        const key = item.key ?? item.name ?? item.label ?? Object.keys(item)[0]
+                                        const value = item.value ?? item.val ?? item.v ?? item[key] ?? ""
+                                        return { key: String(key), value: String(value ?? "") }
+                                    }
+                                    return { key: String(item), value: "" }
+                                }).filter(Boolean)
+                            }
+
+                            if (typeof d === 'object' && d !== null) {
+                                return Object.entries(d).map(([k, v]) => ({ key: k, value: v === null || v === undefined ? '' : String(v) }))
+                            }
+                        } catch (err) {
+                            console.warn('Failed to parse fetched attributes for edit form', err)
+                        }
+                        return []
+                    }
+
+                    const attrs = normalizeAttributes(data.attributes || data.specs || data.specifications || data.custom_attributes || data.custom_attributes_json || data.meta || data.metadata || {})
+                    if (attrs && attrs.length > 0) setCustomFields(attrs.map(a => ({ key: a.key, value: a.value })))
+
+                } catch (err) {
+                    console.warn('Failed to fetch full product details for edit:', err)
+                }
+            })()
+
+        return () => { mounted = false }
+    }, [editing, existing && (existing as any).id])
 
     const addImageSlot = () =>
         setImages([

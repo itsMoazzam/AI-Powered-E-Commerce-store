@@ -13,13 +13,17 @@ import {
     Layers,
     Ruler,
 } from "lucide-react"
+import { Heart } from 'lucide-react'
 import api from "../../lib/api"
 import { addToCart } from '../../lib/cart'
+import { addToWishlist, removeFromWishlist } from '../../lib/wishlist'
 import { useNavigate } from 'react-router-dom'
 import axios from "axios"
 import ReviewForm from "../../components/Reviews/ReviewForm"
 import ReviewList from "../../components/Reviews/ReviewList"
 import Product3DPreview from "../seller/components/Product3DPreview"
+import analytics from '../../lib/analytics'
+import ThreeDot from "../../components/threeDot"
 
 interface ProductVideo {
     id: number
@@ -36,7 +40,8 @@ interface Product {
     id: number
     title: string
     price: number | string
-    thumbnail: string
+    thumbnail?: string
+    slug?: string
     images?: Array<string | { image: string }>
     model_3d?: string
     has3d?: boolean
@@ -66,6 +71,28 @@ export default function ProductDetailPage() {
     const [show3D, setShow3D] = useState(false)
     const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
     const navigate = useNavigate()
+    const [isWish, setIsWish] = useState(false)
+    const [wishLoading, setWishLoading] = useState(false)
+
+    useEffect(() => {
+        let mounted = true
+        try {
+            const raw = localStorage.getItem('intelligentCommerce_wishlist')
+            const arr = raw ? JSON.parse(raw) : []
+            if (mounted && Array.isArray(arr) && product) setIsWish(arr.includes(product.id))
+        } catch (e) {
+            // ignore
+        }
+
+        const onUpdated = (ev: Event) => {
+            try {
+                const detail: any = (ev as CustomEvent).detail
+                if (Array.isArray(detail) && product) setIsWish(detail.includes(product.id))
+            } catch (e) { }
+        }
+        window.addEventListener('intelligentCommerce_wishlist_updated', onUpdated as EventListener)
+        return () => { mounted = false; window.removeEventListener('intelligentCommerce_wishlist_updated', onUpdated as EventListener) }
+    }, [product])
 
     const detect3DModel = (data: any): string | null => {
         const allUrls: string[] = []
@@ -105,6 +132,8 @@ export default function ProductDetailPage() {
 
                 setProduct(enrichedData);
                 setLoading(false);
+                // record product view for recommendation model
+                try { analytics.recordInteraction(Number(id), 'view') } catch (e) { /* ignore */ }
             } catch (err: any) {
                 if (axios.isCancel(err)) return;
 
@@ -159,7 +188,7 @@ export default function ProductDetailPage() {
     if (loading)
         return (
             <div className="p-10 text-center text-gray-500 animate-pulse">
-                Loading product details…
+                <ThreeDot />
             </div>
         )
 
@@ -511,6 +540,40 @@ export default function ProductDetailPage() {
                                 className="flex-1 bg-gray-100 text-gray-900 py-2 rounded-lg border hover:bg-gray-200 font-medium transition"
                             >
                                 Buy Now
+                            </button>
+
+                            {/* Wishlist toggle */}
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        setWishLoading?.(true)
+                                    } catch { }
+                                    try {
+                                        const raw = localStorage.getItem('intelligentCommerce_wishlist')
+                                        const arr = raw ? JSON.parse(raw) : []
+                                        const currently = Array.isArray(arr) ? arr.includes(product.id) : false
+                                        if (currently) {
+                                            await removeFromWishlist(product.id)
+                                            setIsWish?.(false)
+                                        } else {
+                                            await addToWishlist(product.id)
+                                            setIsWish?.(true)
+                                            try { analytics.recordInteraction(product.id, 'wishlist', { action: 'add' }) } catch { }
+                                        }
+                                    } catch (err: any) {
+                                        console.error('Wishlist error', err)
+                                        if (err?.message && err.message.indexOf('Only customers') >= 0) {
+                                            navigate('/auth/login')
+                                        } else {
+                                            alert(err?.message || 'Failed to update wishlist')
+                                        }
+                                    } finally {
+                                        try { setWishLoading?.(false) } catch { }
+                                    }
+                                }}
+                                className={`p-2 rounded-lg border ${isWish ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white text-default'} transition`} aria-pressed={isWish} disabled={wishLoading} title={isWish ? 'Remove from wishlist' : 'Add to wishlist'}
+                            >
+                                <Heart size={18} />
                             </button>
                         </div>
 

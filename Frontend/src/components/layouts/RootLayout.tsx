@@ -4,6 +4,7 @@ import { useState } from "react"
 import NavBar from "../Home/NavBar"
 import ErrorBoundary from "../ErrorBoundary"
 import LoginModal from "../LoginModal"
+import BackendProbe from '../Dev/BackendProbe'
 import { Footer, FooterCopyright, FooterIcon, FooterLink, FooterLinkGroup, FooterTitle } from "flowbite-react";
 import { BsDribbble, BsFacebook, BsGithub, BsInstagram, BsTwitter } from "react-icons/bs";
 import { useTheme } from "../../theme/ThemeProvider";
@@ -19,6 +20,9 @@ export default function RootLayout() {
             <ErrorBoundary>
                 <NavBar loginModalOpen={loginModalOpen} setLoginModalOpen={setLoginModalOpen} setLoginAnchor={setLoginAnchor} />
             </ErrorBoundary>
+
+            {/* Dev backend probe banner (dev-only) */}
+            <BackendProbe />
 
             {/* Login Modal */}
             <LoginModal isOpen={loginModalOpen} anchorRect={loginAnchor} onClose={() => { setLoginModalOpen(false); setLoginAnchor(null); }} />

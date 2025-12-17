@@ -1,6 +1,7 @@
 import HeroBanner from "../components/Home/HeroBanner"
 import ProductGrid from "../components/Home/ProductGrid"
 import CategoriesStrip from "../components/Home/CategoriesStrip"
+import Recommended from '../components/Products/Recommended'
 import { useState } from 'react'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -21,9 +22,12 @@ export default function Home() {
             )} */}
             <HeroBanner />
 
+
+
             {/* Categories strip under hero banner */}
             <CategoriesStrip />
-
+            {/* Recommended products (personalized) */}
+            <Recommended />
             {/* Main content: product grid (full width) */}
             <div>
                 <ProductGrid />

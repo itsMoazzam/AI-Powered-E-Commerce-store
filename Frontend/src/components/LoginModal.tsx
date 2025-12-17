@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import api from "../lib/api";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../store";
@@ -67,16 +68,8 @@ export default function LoginModal({ isOpen, onClose, anchorRect }: LoginModalPr
 
     if (!isOpen) return null;
 
-    const isAnchored = Boolean((anchorRect) && (window.innerWidth >= 768))
-    const anchoredStyle: React.CSSProperties | undefined = isAnchored && anchorRect ? {
-        position: 'fixed',
-        top: anchorRect.bottom + window.scrollY + 8,
-        left: anchorRect.left + window.scrollX,
-        zIndex: 99999,
-        width: Math.min(360, anchorRect.width || 320)
-    } : undefined
-
-    return (
+    // Render modal into document.body to avoid layout/transform parents affecting position
+    const modal = (
         <div>
             {/* Backdrop */}
             <div
@@ -84,19 +77,17 @@ export default function LoginModal({ isOpen, onClose, anchorRect }: LoginModalPr
                 onClick={onClose}
             />
 
-            {/* Modal or anchored popover */}
-            <div className="fixed inset-0 z-50 p-4 pt-8 pointer-events-none mt-8">
-                {/* Decorative glows and slow-moving background when modal centered (not anchored) */}
-                {!isAnchored && (
-                    <>
-                        <div className="auth-modal-bg" />
-                        <div className="absolute w-72 h-72 bg-blue-600/30 rounded-full blur-3xl top-20 left-8 animate-pulse" />
-                        <div className="absolute w-72 h-72 bg-purple-600/30 rounded-full blur-3xl bottom-20 right-8 animate-pulse delay-300" />
-                    </>
-                )}
+            {/* Centered Modal */}
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                {/* Decorative glows and slow-moving background (kept for visual parity) */}
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="auth-modal-bg" />
+                    <div className="absolute w-72 h-72 bg-blue-600/30 rounded-full blur-3xl top-20 left-8 animate-pulse" />
+                    <div className="absolute w-72 h-72 bg-purple-600/30 rounded-full blur-3xl bottom-20 right-8 animate-pulse delay-300" />
+                </div>
 
-                <div style={anchoredStyle} className={`${isAnchored ? 'pointer-events-auto' : 'mx-auto pointer-events-auto'} relative ${isAnchored ? '' : 'w-full max-w-md'}`}>
-                    <div className="relative z-10 w-full max-w-md bg-gray-800/70 backdrop-blur-xl border border-gray-700 rounded-3xl shadow-2xl p-8 text-white transform transition-all" style={{ pointerEvents: 'auto' }}>
+                <div className={`relative z-10 w-full max-w-md pointer-events-auto`}>
+                    <div className="relative z-10 w-full max-w-md bg-gray-800/70 backdrop-blur-xl border border-gray-700 rounded-3xl shadow-2xl p-8 text-white transform transition-all">
                         {/* Close Button */}
                         <button
                             onClick={onClose}
@@ -290,5 +281,7 @@ export default function LoginModal({ isOpen, onClose, anchorRect }: LoginModalPr
             </div>
         </div>
     )
+
+    return (createPortal(modal, document.body))
 }
 

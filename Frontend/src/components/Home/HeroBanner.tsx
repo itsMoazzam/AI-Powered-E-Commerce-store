@@ -48,33 +48,52 @@ export default function HeroBanner() {
     const [current, setCurrent] = useState(0)
     const [slides, setSlides] = useState<Advertisement[]>(defaultSlides)
     const [loading, setLoading] = useState(true)
+    // one-time guard to avoid noisy proxy/network errors
+    let adFetchWarningShown = false
 
     useEffect(() => {
         // Fetch seller advertisements publicly (no auth) so all visitors can see seller ads.
         const fetchAds = async () => {
             try {
-                const res = await fetch('/api/advertisements/')
-                if (!res.ok) throw res
-                const data = await res.json()
-                if (Array.isArray(data) && data.length > 0) {
-                    // Prioritize explicit seller ads so visitors see them first
-                    const sellerAds = data.filter((d: any) => d && d.seller_id)
-                    const otherAds = data.filter((d: any) => !d || !d.seller_id)
-                    const combined = [...sellerAds, ...otherAds]
-
-                    // If we have less than 3 ads, combine with default slides
-                    const toUse = combined.length < 3 ? [...combined, ...defaultSlides.slice(0, 3 - combined.length)] : combined.slice(0, 5)
-                    setSlides(toUse)
-
-                    if (import.meta.env.DEV) {
-                        // eslint-disable-next-line no-console
-                        console.debug('HeroBanner: loaded advertisements', { total: data.length, sellerAds: sellerAds.length })
+                // Try public fetch first for guests (avoid axios auth redirects)
+                try {
+                    const res = await fetch('/api/advertisements/')
+                    if (res.ok) {
+                        const data = await res.json()
+                        if (Array.isArray(data) && data.length > 0) {
+                            const sellerAds = data.filter((d: any) => d && d.seller_id)
+                            const otherAds = data.filter((d: any) => !d || !d.seller_id)
+                            const combined = [...sellerAds, ...otherAds]
+                            const toUse = combined.length < 3 ? [...combined, ...defaultSlides.slice(0, 3 - combined.length)] : combined.slice(0, 5)
+                            setSlides(toUse)
+                            if (import.meta.env.DEV) console.debug('HeroBanner: loaded advertisements', { total: data.length, sellerAds: sellerAds.length })
+                            return
+                        }
                     }
-                } else {
-                    setSlides(defaultSlides)
-                }
+                } catch (e) { /* fallback */ }
+
+                // fallback to legacy endpoint or default
+                try {
+                    const res2 = await fetch('/api/advertisements/')
+                    if (res2.ok) {
+                        const data2 = await res2.json()
+                        if (Array.isArray(data2) && data2.length > 0) {
+                            setSlides(data2.slice(0, 5))
+                            return
+                        }
+                    }
+                } catch (e) { }
+
+                setSlides(defaultSlides)
             } catch (err) {
-                console.error('Failed to fetch advertisements:', err)
+                const msg = String(err)
+                const isNetworkErr = msg.includes('ECONNREFUSED') || msg.includes('NetworkError') || msg.includes('ERR_FAILED') || msg.includes('ERR_BLOCKED_BY_CLIENT')
+                if (isNetworkErr && !adFetchWarningShown) {
+                    adFetchWarningShown = true
+                    console.warn('Advertisements unavailable (proxy or network). Showing default slides instead.')
+                } else if (!isNetworkErr && import.meta.env.DEV) {
+                    console.debug('HeroBanner: fetch error', err)
+                }
                 setSlides(defaultSlides)
             } finally {
                 setLoading(false)
@@ -110,7 +129,7 @@ export default function HeroBanner() {
                 <div
                     key={`slide-${slide.id ?? index}-${index}`}
                     className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${current === index ? "opacity-100" : "opacity-0"
-                        }`} 
+                        }`}
                 >
                     <img
                         src={slide.image}

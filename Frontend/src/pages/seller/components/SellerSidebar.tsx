@@ -94,12 +94,12 @@ export default function SellerSidebar({ view, setView, productCount }: SellerSid
                 <div className="border-t border-card my-4 lg:my-6" />
 
                 {/* Footer Info */}
-                <div className="space-y-2 text-xs text-muted bg-black/5 dark:bg-white/5 p-3 rounded-lg">
+                {/* <div className="space-y-2 text-xs text-muted bg-black/5 dark:bg-white/5 p-3 rounded-lg">
                     <div className="font-semibold text-default text-xs mb-2">💡 Quick Tips</div>
                     <div>📦 Upload .glb models for 3D previews (max 10MB)</div>
                     <div>📧 Support: support@example.com</div>
                     <div>🔄 Changes save automatically</div>
-                </div>
+                </div> */}
             </aside>
 
             {/* --- Overlay for Mobile --- */}
