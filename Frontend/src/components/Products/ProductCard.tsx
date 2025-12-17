@@ -2,6 +2,8 @@
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Star } from "lucide-react"
+import { useState } from 'react'
+import ReportModal from '../ReportModal'
 
 interface Product {
     id: number
@@ -20,6 +22,8 @@ export default function ProductCard({
     product: Product
     index: number
 }) {
+    const [reportOpen, setReportOpen] = useState(false)
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -36,6 +40,16 @@ export default function ProductCard({
                         className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-110"
                         loading="lazy"
                     />
+
+                    {/* Report button - prevents link navigation */}
+                    <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReportOpen(true) }}
+                        title="Report product"
+                        className="absolute top-2 right-2 bg-white/90 text-red-600 text-xs px-2 py-1 rounded-md border border-red-100 hover:bg-red-50"
+                    >
+                        Report
+                    </button>
+
                     {product.discount && (
                         <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-md font-semibold">
                             -{product.discount}%
@@ -81,6 +95,8 @@ export default function ProductCard({
                     </button>
                 </div>
             </Link>
+
+            <ReportModal isOpen={reportOpen} onClose={() => setReportOpen(false)} targetType="product" targetId={product.id} targetName={product.title} />
         </motion.div>
     )
 }

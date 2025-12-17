@@ -1,5 +1,5 @@
 // src/pages/Products/ProductDetailPage.tsx
-import { useParams, Link } from "react-router-dom"
+import { useParams, Link, useNavigate } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -13,11 +13,11 @@ import {
     Layers,
     Ruler,
 } from "lucide-react"
+import ReportModal from "../../components/ReportModal"
 import { Heart } from 'lucide-react'
 import api from "../../lib/api"
 import { addToCart } from '../../lib/cart'
 import { addToWishlist, removeFromWishlist } from '../../lib/wishlist'
-import { useNavigate } from 'react-router-dom'
 import axios from "axios"
 import ReviewForm from "../../components/Reviews/ReviewForm"
 import ReviewList from "../../components/Reviews/ReviewList"
@@ -32,8 +32,10 @@ interface ProductVideo {
 }
 
 interface Seller {
+    id?: number | string
     name: string
-    logo: string
+    logo?: string
+    business_name?: string
 }
 
 interface Product {
@@ -73,6 +75,10 @@ export default function ProductDetailPage() {
     const navigate = useNavigate()
     const [isWish, setIsWish] = useState(false)
     const [wishLoading, setWishLoading] = useState(false)
+
+    // report modal state
+    const [reportSellerOpen, setReportSellerOpen] = useState(false)
+    const [reportProductOpen, setReportProductOpen] = useState(false)
 
     useEffect(() => {
         let mounted = true
@@ -414,11 +420,19 @@ export default function ProductDetailPage() {
                     {/* --- Right: Info --- */}
                     <div className="bg-white rounded-xl p-6 shadow-sm border">
                         {product.seller && (
-                            <div className="flex items-center gap-2 mb-3">
-                                <img src={product.seller.logo} alt={product.seller.name} className="w-8 h-8 rounded-full border" />
-                                <span className="text-sm text-gray-700 flex items-center gap-1">
-                                    <Store size={14} /> {product.seller.name}
-                                </span>
+                            <div className="flex items-center gap-2 mb-3 justify-between">
+                                <div className="flex items-center gap-2">
+                                    <img src={product.seller.logo} alt={product.seller.name} className="w-8 h-8 rounded-full border" />
+                                    <span className="text-sm text-gray-700 flex items-center gap-1">
+                                        <Store size={14} /> {product.seller.name}
+                                    </span>
+                                </div>
+                                <div>
+                                    <button
+                                        onClick={() => setReportSellerOpen(true)}
+                                        className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 border border-red-100 hover:bg-red-100"
+                                    >Report Seller</button>
+                                </div>
                             </div>
                         )}
 
@@ -575,6 +589,8 @@ export default function ProductDetailPage() {
                             >
                                 <Heart size={18} />
                             </button>
+
+                            <button onClick={() => setReportProductOpen(true)} className="px-3 py-2 rounded-lg border text-sm text-red-600 hover:bg-red-50">Report Product</button>
                         </div>
 
                         <p className="mt-6 text-gray-700 text-sm leading-relaxed border-t pt-4 whitespace-pre-line break-words">
@@ -592,6 +608,10 @@ export default function ProductDetailPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Report modals */}
+            <ReportModal isOpen={reportSellerOpen} onClose={() => setReportSellerOpen(false)} targetType="seller" targetId={product.seller?.id ?? 0} targetName={product.seller?.name} />
+            <ReportModal isOpen={reportProductOpen} onClose={() => setReportProductOpen(false)} targetType="product" targetId={product.id} targetName={product.title} />
 
             {/* Related products */}
             {relatedProducts.length > 0 && (

@@ -340,7 +340,7 @@ export default function NavBar({ setLoginModalOpen, setLoginAnchor }: NavBarProp
 
         // Try backend top sellers first; if unavailable or empty, fallback to advertisements
         try {
-            const tres = await fetch('/api/sellers/top/')
+            const tres = await fetch('/api/seller/top/')
             if (tres.ok) {
                 const data = await tres.json()
                 if (Array.isArray(data) && data.length > 0) {
