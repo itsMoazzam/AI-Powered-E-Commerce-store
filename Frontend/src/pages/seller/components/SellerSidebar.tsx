@@ -21,7 +21,7 @@ export default function SellerSidebar({ view, setView, productCount }: SellerSid
         { id: "balances", label: "Balances", icon: <BarChart2 className="w-4 h-4 sm:w-5 sm:h-5" /> },
         { id: "reviews", label: "Reviews", icon: <FileText className="w-4 h-4 sm:w-5 sm:h-5" /> },
         { id: "system", label: "System Health", icon: <Server className="w-4 h-4 sm:w-5 sm:h-5" /> },
-        { id: "reports", label: "Reports", icon: <BarChart2 className="w-4 h-4 sm:w-5 sm:h-5" /> },
+        // { id: "reports", label: "Reports", icon: <BarChart2 className="w-4 h-4 sm:w-5 sm:h-5" /> },
     ]
 
     const handleMenuClick = (itemId: string) => {

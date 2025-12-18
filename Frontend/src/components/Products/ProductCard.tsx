@@ -41,13 +41,13 @@ export default function ProductCard({
                     />
 
                     {/* Report button - prevents link navigation */}
-                    <button
+                    {/* <button
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/report?type=product&targetId=${product.id}&targetName=${encodeURIComponent(product.title)}`) }}
                         title="Report product"
                         className="absolute top-2 right-2 bg-white/90 text-red-600 text-xs px-2 py-1 rounded-md border border-red-100 hover:bg-red-50"
                     >
                         Report
-                    </button>
+                    </button> */}
 
                     {product.discount && (
                         <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-md font-semibold">
