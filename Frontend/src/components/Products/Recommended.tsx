@@ -23,43 +23,59 @@ export default function Recommended({ limit = 12 }: { limit?: number }) {
         const fetchRecs = async () => {
             try {
                 setLoading(true)
-                // ask for user recommendations first
-                const res = await fetch(`/api/recommendations/products/?top_k=${limit}`)
-                if (!res.ok) throw res
-                const data = await res.json()
-                const list = Array.isArray(data) ? data : (data?.results ?? [])
-                if (list.length === 0) {
-                    // fallback to popular
+                
+                // Check if user is logged in
+                const token = localStorage.getItem('token')
+                
+                // Try collaborative filtering only if authenticated
+                if (token) {
+                    try {
+                        const res = await fetch(`/api/recommendations/collaborative/?top_k=${limit}&min_common_purchases=2`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        })
+                        if (res.ok) {
+                            const data = await res.json()
+                            if (data?.products && data.products.length > 0) {
+                                if (mounted) {
+                                    setItems(data.products.slice(0, limit))
+                                    setMessage(data.message || 'Personalized recommendations based on similar users')
+                                }
+                                return
+                            }
+                        }
+                    } catch (err: any) {
+                        console.log('Collaborative filtering unavailable, falling back to popular')
+                    }
+                }
+
+                // Fallback to popular products (no auth needed)
+                try {
                     const pres = await fetch(`/api/recommendations/popular/?top_k=${limit}`)
                     if (pres.ok) {
                         const pdata = await pres.json()
-                        setItems(Array.isArray(pdata) ? pdata : (pdata?.results ?? []))
-                        setMessage('Try browsing products to get personalized picks')
+                        const list = Array.isArray(pdata) ? pdata : (pdata?.results ?? [])
+                        if (mounted) {
+                            setItems(list.slice(0, limit))
+                            setMessage('Popular picks')
+                        }
                     } else {
-                        setItems([])
-                        setMessage('No recommendations available')
+                        throw new Error('Popular endpoint failed')
                     }
-                } else {
-                    setItems(list.slice(0, limit))
-                    setMessage(null)
+                } catch (err) {
+                    // Final fallback to demo products
+                    if (mounted) {
+                        setItems(demoProducts.slice(0, limit) as any)
+                        setMessage('Featured products')
+                    }
                 }
             } catch (err) {
                 console.error('Failed to load recommendations', err)
-                // If backend is unreachable (dev proxy down), fall back to demo data so UI remains useful
-                setMessage('Recommendations unavailable — showing demo data')
-                try {
-                    // try popular endpoint first
-                    const pres = await fetch(`/api/recommendations/popular/?top_k=${limit}`)
-                    if (pres.ok) {
-                        const pdata = await pres.json()
-                        setItems(Array.isArray(pdata) ? pdata : (pdata?.results ?? []))
-                    } else {
-                        // fallback to bundled demo products
-                        setItems(demoProducts.slice(0, limit) as any)
-                    }
-                } catch (e) {
-                    // final fallback: bundled demo products
+                if (mounted) {
                     setItems(demoProducts.slice(0, limit) as any)
+                    setMessage('Featured products')
                 }
             } finally {
                 if (mounted) setLoading(false)

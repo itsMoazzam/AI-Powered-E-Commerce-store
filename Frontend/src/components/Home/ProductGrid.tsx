@@ -21,6 +21,7 @@ export default function ProductGrid() {
     const [error, setError] = useState<string | null>(null)
 
     const sentinelRef = useRef<HTMLDivElement | null>(null)
+    const initFetchedRef = useRef(false)
 
     const fetchAds = useCallback(async () => {
         try {
@@ -92,9 +93,13 @@ export default function ProductGrid() {
     }, [])
 
     useEffect(() => {
+        if (initFetchedRef.current) return
+        initFetchedRef.current = true
+        setProducts([])
+        setPage(1)
         fetchAds()
         fetchPage(1)
-    }, [fetchAds, fetchPage])
+    }, [])
 
     // infinite scroll using intersection observer
     useEffect(() => {
