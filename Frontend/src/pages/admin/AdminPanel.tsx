@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { LayoutDashboard, CreditCard, MessageSquare, Server, Users, BarChart3, Settings, LogOut, Sun, Moon, Menu, X, Edit2, Trash2, Lock, Unlock, Eye, EyeOff, Check, XCircle, AlertCircle } from "lucide-react"
 import api from "../../lib/api"
 import { useTheme } from "../../theme/ThemeProvider"
+import ThreeDot from "../../components/threeDot"
 
 type Payment = { id: number; txn_id: string; amount: string; bank: string; ocr_summary: string; email_match: boolean; screenshot: string }
 type Review = { id: number; text: string; toxicity: number; plagiarism: number }
@@ -42,6 +43,7 @@ export default function AdminPanel() {
     const processingIds = useRef<Set<number>>(new Set())
 
     const [reportsAccessError, setReportsAccessError] = useState<string | null>(null)
+    const [loadingUsers, setLoadingUsers] = useState<boolean>(false)
 
     useEffect(() => {
         const endpoints: Record<string, string> = { payments: "/api/admin/payments/", reviews: "/api/admin/reviews/", system: "/api/admin/system-status/", users: "/api/admin/users/", sellers: "/api/admin/sellers/", reports: "/api/admin/reports/" }
@@ -157,11 +159,23 @@ export default function AdminPanel() {
         return () => window.removeEventListener('resize', handleResize)
     }, [])
 
+    // Show a small loader for the Users tab for up to 3s before showing "No users found"
+    useEffect(() => {
+        let timer: number | undefined
+        if (tab === 'users') {
+            setLoadingUsers(true)
+            timer = window.setTimeout(() => setLoadingUsers(false), 3000)
+        } else {
+            setLoadingUsers(false)
+        }
+        return () => { if (timer) window.clearTimeout(timer) }
+    }, [tab])
+
     const blockUser = async (id: number, reason: string) => {
         if (processingIds.current.has(id)) return
         processingIds.current.add(id)
         try {
-            await api.post(`/api/admin/users/${id}/block/`, { reason })
+            await api.post(`/api/admin/user/${id}/block/`, { reason })
             setUsers((prev) => prev.map((u) => u.id === id ? { ...u, is_blocked: true } : u))
             alert('User blocked')
             setShowBlockModal(false)
@@ -174,7 +188,7 @@ export default function AdminPanel() {
         if (processingIds.current.has(id)) return
         processingIds.current.add(id)
         try {
-            await api.post(`/api/admin/users/${id}/unblock/`)
+            await api.post(`/api/admin/user/${id}/unblock/`)
             setUsers((prev) => prev.map((u) => u.id === id ? { ...u, is_blocked: false } : u))
         } catch (err) { alert('Failed to unblock user') }
         finally { processingIds.current.delete(id) }
@@ -397,7 +411,11 @@ export default function AdminPanel() {
                     {tab === "users" && (
                         <Section title="Manage Users">
                             {users.length === 0 ? (
-                                <div className="text-center py-8 text-muted">No users found</div>
+                                loadingUsers ? (
+                                    <div className="p-10 text-center"><ThreeDot /></div>
+                                ) : (
+                                    <div className="text-center py-8 text-muted">No users found</div>
+                                )
                             ) : (
                                 <div className="overflow-x-auto -mx-3 md:-mx-4 lg:-mx-0">
                                     <div className="inline-block min-w-full px-3 md:px-4 lg:px-0">

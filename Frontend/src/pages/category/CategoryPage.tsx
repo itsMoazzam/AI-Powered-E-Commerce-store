@@ -24,8 +24,8 @@ function RelatedForCategory({ slug }: { slug?: string }) {
             <h2 className="text-xl font-semibold mb-3">Suggested from this category</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {items.map((p) => (
-                    <a key={p.id} href={`/product/${p.id}`} className="block bg-white rounded border p-2">
-                        <img src={p.thumbnail || '/placeholder.png'} className="w-full h-32 object-cover rounded" />
+                    <a key={p.id} href={`/product/${p.id}`} className="block   bg-blue-50 p-2">
+                        <img src={p.thumbnail || '/placeholder.png'} alt={p.title || 'Product image'} className="w-full h-32 object-content rounded bg-gray-100 " />
                         <div className="mt-2 text-sm font-medium truncate">{p.title}</div>
                         <div className="text-xs text-muted">${Number(p.price ?? 0).toFixed(2)}</div>
                     </a>
