@@ -16,32 +16,7 @@ interface Advertisement {
     type?: "new_arrivals" | "custom"
 }
 
-const defaultSlides = [
-    {
-        id: 1,
-        title: "Discover the Latest Trends",
-        subtitle: "Shop smart. Look sharp.",
-        cta_text: "Shop Now",
-        cta_link: "/shop",
-        image: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=1600&q=80",
-    },
-    {
-        id: 2,
-        title: "New Arrivals Just In",
-        subtitle: "Fresh styles for every season.",
-        cta_text: "Explore",
-        cta_link: "/search?sort=new",
-        image: "https://koriah.com.au/cdn/shop/articles/kpop-outfits-a-visual-journey-into-the-world-of-kpop-fashion.jpg?v=1731290036",
-    },
-    {
-        id: 3,
-        title: "Exclusive Offers Await",
-        subtitle: "Upgrade your look at unbeatable prices.",
-        cta_text: "See Deals",
-        cta_link: "/search?discount=true",
-        image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1600&q=80",
-    },
-]
+const defaultSlides: Advertisement[] = []
 
 export default function HeroBanner() {
     const { primary } = useTheme()
@@ -52,38 +27,40 @@ export default function HeroBanner() {
     let adFetchWarningShown = false
 
     useEffect(() => {
+        // Normalize many possible API response shapes to an array
+        const normalizeAds = (raw: any): Advertisement[] => {
+            if (!raw) return []
+            if (Array.isArray(raw)) return raw
+            if (Array.isArray(raw.results)) return raw.results
+            if (Array.isArray(raw.advertisements)) return raw.advertisements
+            if (Array.isArray(raw.items)) return raw.items
+            if (Array.isArray(raw.data)) return raw.data
+            // some endpoints wrap in { data: { results: [...] } }
+            if (raw.data && Array.isArray(raw.data.results)) return raw.data.results
+            return []
+        }
+
         // Fetch seller advertisements publicly (no auth) so all visitors can see seller ads.
         const fetchAds = async () => {
             try {
-                // Try public fetch first for guests (avoid axios auth redirects)
-                try {
-                    const res = await fetch('/api/advertisements/')
-                    if (res.ok) {
-                        const data = await res.json()
-                        if (Array.isArray(data) && data.length > 0) {
-                            const sellerAds = data.filter((d: any) => d && d.seller_id)
-                            const otherAds = data.filter((d: any) => !d || !d.seller_id)
-                            const combined = [...sellerAds, ...otherAds]
-                            const toUse = combined.length < 3 ? [...combined, ...defaultSlides.slice(0, 3 - combined.length)] : combined.slice(0, 5)
-                            setSlides(toUse)
-                            if (import.meta.env.DEV) console.debug('HeroBanner: loaded advertisements', { total: data.length, sellerAds: sellerAds.length })
-                            return
-                        }
+                const res = await fetch('/api/advertisements/')
+                if (res.ok) {
+                    const raw = await res.json()
+                    const data = normalizeAds(raw)
+                    if (data.length > 0) {
+                        const sellerAds = data.filter((d: any) => d && d.seller_id)
+                        const otherAds = data.filter((d: any) => !d || !d.seller_id)
+                        const combined = [...sellerAds, ...otherAds]
+                        const toUse = combined.length < 3 ? [...combined, ...defaultSlides.slice(0, 3 - combined.length)] : combined.slice(0, 5)
+                        setSlides(toUse)
+                        setCurrent(0)
+                        if (import.meta.env.DEV) console.debug('HeroBanner: loaded advertisements', { total: data.length, sellerAds: sellerAds.length })
+                        setLoading(false)
+                        return
                     }
-                } catch (e) { /* fallback */ }
+                }
 
-                // fallback to legacy endpoint or default
-                try {
-                    const res2 = await fetch('/api/advertisements/')
-                    if (res2.ok) {
-                        const data2 = await res2.json()
-                        if (Array.isArray(data2) && data2.length > 0) {
-                            setSlides(data2.slice(0, 5))
-                            return
-                        }
-                    }
-                } catch (e) { }
-
+                // no usable ads found — fall back to default slides
                 setSlides(defaultSlides)
             } catch (err) {
                 const msg = String(err)
@@ -104,14 +81,15 @@ export default function HeroBanner() {
     }, [])
 
     useEffect(() => {
+        if (slides.length <= 1) return
         const timer = setInterval(() => {
             setCurrent((prev) => (prev + 1) % slides.length)
         }, 6000)
         return () => clearInterval(timer)
     }, [slides.length])
 
-    const nextSlide = () => setCurrent((prev) => (prev + 1) % slides.length)
-    const prevSlide = () => setCurrent((prev) => (prev - 1 + slides.length) % slides.length)
+    const nextSlide = () => { if (slides.length === 0) return; setCurrent((prev) => (prev + 1) % slides.length) }
+    const prevSlide = () => { if (slides.length === 0) return; setCurrent((prev) => (prev - 1 + slides.length) % slides.length) }
 
     if (loading) {
         return (

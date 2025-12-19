@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import api from '../lib/api'
 import { printInvoice } from '../lib/invoice'
 import { loadOrderHistory } from '../lib/checkout'
+import ThreeDot from '../components/threeDot'
 
 type Order = {
   id: number | string
@@ -150,7 +151,7 @@ export default function OrderHistory() {
         </div>
       )}
       <div className="space-y-4">
-        {orders.length === 0 && <div className="text-sm text-muted">You have no orders yet.</div>}
+        {orders.length === 0 && <ThreeDot />}
         {orders.map((o) => (
           <div key={o.id} className="p-4 bg-surface border-theme border rounded-md">
             <div className="flex items-center justify-between">

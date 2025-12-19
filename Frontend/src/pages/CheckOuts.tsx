@@ -61,7 +61,8 @@ export default function Checkout() {
             return
         }
 
-        if (!payment.cardNumber || !payment.expiry || !payment.cvv) {
+        // Only require card details for online payments
+        if (selectedPayment === 'online' && (!payment.cardNumber || !payment.expiry || !payment.cvv)) {
             alert("Please enter valid payment details.")
             return
         }
@@ -195,16 +196,30 @@ export default function Checkout() {
                     }
                 })()
             } else {
-                // no product query — optionally load cart items from backend for checkout
+                // no product query — try to load server-side cart, else fall back to local cart storage
                 ; (async () => {
                     try {
                         const { data } = await api.get('/api/cart/')
                         const { normalizeCartResponse } = await import('../lib/cart')
                         const normalized = normalizeCartResponse(data)
-                        const loaded = (normalized.items || []).map((it: any) => ({ id: it.id, name: String(it.title ?? ''), qty: Number(it.qty ?? it.quantity ?? 1), price: Number(it.price ?? 0) }))
+                        let loaded = (normalized.items || []).map((it: any) => ({ id: it.id, name: String(it.title ?? ''), qty: Number(it.qty ?? it.quantity ?? 1), price: Number(it.price ?? 0) }))
+                        // If server cart empty, try local cart fallback
+                        if (!loaded || loaded.length === 0) {
+                            try {
+                                const local = loadCartFromStorage()
+                                loaded = (local.items || []).map((it: any) => ({ id: it.productId || it.id, name: it.title || it.name || 'Product', qty: Number(it.qty ?? it.quantity ?? 1), price: Number(it.price ?? 0) }))
+                            } catch (err) { /* ignore */ }
+                        }
                         setItems(loaded)
                     } catch (err) {
-                        // ignore — user may proceed with manual items
+                        console.debug('Failed to load server cart; falling back to local cart', err)
+                        try {
+                            const local = loadCartFromStorage()
+                            const loaded = (local.items || []).map((it: any) => ({ id: it.productId || it.id, name: it.title || it.name || 'Product', qty: Number(it.qty ?? it.quantity ?? 1), price: Number(it.price ?? 0) }))
+                            setItems(loaded)
+                        } catch (e) {
+                            // ignore — leave items empty
+                        }
                     }
                 })()
             }
@@ -341,8 +356,8 @@ export default function Checkout() {
                                 <div className="text-sm text-zinc-600">Cash on Delivery selected. You'll pay the courier on delivery.</div>
                             )}
 
-                            {/* allow receipt upload for offline payment verification */}
-                            {selectedPayment && selectedPayment !== 'online' && (
+                            {/* allow receipt upload for certain offline payment methods (not for COD) */}
+                            {selectedPayment && selectedPayment !== 'online' && selectedPayment !== 'cod' && (
                                 <div className="mt-2">
                                     <ReceiptUpload onVerified={(ok) => { if (ok) alert('Receipt processed') }} />
                                 </div>

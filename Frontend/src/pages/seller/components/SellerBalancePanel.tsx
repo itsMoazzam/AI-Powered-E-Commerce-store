@@ -17,12 +17,38 @@ export default function SellerBalancePanel() {
 
     useEffect(() => {
         let mounted = true
-        setLoading(true)
-        api.get('/api/seller/balances/')
-            .then(res => { if (mounted) setEntries(res.data) })
-            .catch(err => console.error('Failed to load balances', err))
-            .finally(() => { if (mounted) setLoading(false) })
-        return () => { mounted = false }
+
+        const normalizeBalances = (data: any): BalanceEntry[] => {
+            if (Array.isArray(data)) return data
+            if (Array.isArray(data.results)) return data.results
+            if (Array.isArray(data.balances)) return data.balances
+            if (Array.isArray(data.items)) return data.items
+            if (Array.isArray(data.data)) return data.data
+            return []
+        }
+
+        const load = async () => {
+            try {
+                setLoading(true)
+                const res = await api.get('/api/seller/balances/')
+                const norm = normalizeBalances(res.data)
+                if (mounted) setEntries(norm)
+            } catch (err) {
+                console.error('Failed to load balances', err)
+                if (mounted) setEntries([])
+            } finally {
+                if (mounted) setLoading(false)
+            }
+        }
+
+        // initial load
+        load()
+
+        // listen for external refresh events (e.g., after syncing payouts)
+        const handler = () => { load() }
+        window.addEventListener('balances:refresh', handler)
+
+        return () => { mounted = false; window.removeEventListener('balances:refresh', handler) }
     }, [])
 
     const pending = entries.filter(e => e.payout_status === 'pending')
