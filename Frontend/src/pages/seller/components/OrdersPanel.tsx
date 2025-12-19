@@ -3,11 +3,13 @@ import api from '../../../lib/api'
 
 type Order = {
   id: number | string
+  username?: string
   status: string
   customer?: string
   total?: number
   updated_at?: string
   location?: { lat: number; lng: number }
+  phone?: string
 }
 
 type Period = 'week' | 'month' | 'year' | 'custom'
@@ -56,6 +58,8 @@ export default function OrdersPanel() {
   const normalizeOrder = (item: any): Order => ({
     id: item.id,
     status: item.status,
+    username: item.username,
+    phone: item.phone,
     // prefer customer profile full name, fall back to other name fields
     customer:
       item.customer?.profile?.full_name ??
@@ -82,6 +86,34 @@ export default function OrdersPanel() {
     updated_at: item.updated_at ?? item.updated ?? item.created ?? undefined,
     location: item.location
   })
+
+  // extract customer contact and address information from a variety of possible shapes
+  const extractCustomerInfo = (o: any) => {
+    if (!o) return { username: null, phone: null, avatar: null, address: null }
+
+    // look under common top-level and nested keys
+    const nestedKeys = ['customer', 'buyer', 'user', 'profile', 'customer_info', 'buyer_info', 'user_info', 'customer_profile', 'buyer_profile']
+    let nested: any = null
+    for (const k of nestedKeys) {
+      if (o[k]) {
+        nested = o[k]
+        break
+      }
+    }
+
+    const pick = (obj: any, names: string[]) => {
+      if (!obj) return null
+      for (const n of names) if (obj[n]) return obj[n]
+      return null
+    }
+
+    let username = o.username || null
+    const phone = pick(nested, ['phone', 'mobile', 'telephone']) || pick(o, ['phone', 'mobile']) || null
+    const avatar = pick(nested, ['picture', 'avatar', 'image', 'profile_picture']) || null
+    const address = nested?.address || o.shipping || o.shipping_address || o.billing || null
+
+    return { username, phone, avatar, address }
+  }
 
   const fetchOrders = async () => {
     setLoading(true)
@@ -112,6 +144,81 @@ export default function OrdersPanel() {
       setError('Failed to load orders')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const [syncingPayouts, setSyncingPayouts] = useState(false)
+
+  // Order detail modal state
+  const [selectedOrderDetail, setSelectedOrderDetail] = useState<any | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
+
+  // computed customer info for modal rendering
+  const custInfo = selectedOrderDetail ? extractCustomerInfo(selectedOrderDetail) : { username: null, phone: null, avatar: null, address: null }
+
+  const viewOrder = async (id: number | string) => {
+    try {
+      setDetailLoading(true)
+      setDetailError(null)
+      // Fetch full order details from server
+      const { data } = await api.get(`/api/orders/${id}/`)
+      setSelectedOrderDetail(data)
+    } catch (err) {
+      console.error('Failed to fetch order detail', err)
+      setDetailError('Failed to load order details')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  const closeDetail = () => {
+    setSelectedOrderDetail(null)
+    setDetailError(null)
+  }
+
+  // Sync paid orders into pending seller balances by calling confirm-received
+  const syncPayouts = async () => {
+    try {
+      setSyncingPayouts(true)
+      // fetch existing balances to avoid duplicates
+      const { data: balances } = await api.get('/api/seller/balances/')
+      const existing = new Set((balances || []).map((b: any) => String(b.order_id)))
+
+      // find paid orders that are not yet represented in balances
+      const candidates = orders.filter(o => (o.status || '').toLowerCase().includes('paid') && !existing.has(String(o.id)))
+
+      if (!candidates.length) {
+        alert('No paid orders pending payout.')
+        return
+      }
+
+      const totalAmount = candidates.reduce((s, o) => s + (o.total || 0), 0)
+      const confirmed = window.confirm(`Found ${candidates.length} paid orders totaling $${totalAmount.toFixed(2)}. Add them to pending payouts?`)
+      if (!confirmed) return
+
+      let success = 0
+      let failed = 0
+      for (const o of candidates) {
+        try {
+          await api.post(`/api/orders/${o.id}/confirm-received/`)
+          success++
+        } catch (err) {
+          console.error('Failed to schedule payout for order', o.id, err)
+          failed++
+        }
+      }
+
+      // refresh orders and notify balances panel to refresh
+      await fetchOrders()
+      window.dispatchEvent(new Event('balances:refresh'))
+
+      alert(`Sync complete. ${success} scheduled, ${failed} failed.`)
+    } catch (err) {
+      console.error('Failed to sync payouts', err)
+      alert('Failed to sync payouts. See console for details.')
+    } finally {
+      setSyncingPayouts(false)
     }
   }
 
@@ -288,13 +395,23 @@ export default function OrdersPanel() {
               <option value="cancelled">❌ Cancelled</option>
               <option value="failed">⚠️ Failed</option>
             </select>
-            <button
-              onClick={() => fetchOrders()}
-              className="btn-responsive w-full sm:w-auto"
-              style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--card-border)' }}
-            >
-              🔄 Refresh
-            </button>
+            <div className="flex gap-2 items-center">
+              <button
+                onClick={() => fetchOrders()}
+                className="btn-responsive"
+                style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--card-border)' }}
+              >
+                🔄 Refresh
+              </button>
+              <button
+                onClick={() => syncPayouts()}
+                disabled={syncingPayouts}
+                className="btn-responsive"
+                style={{ background: syncingPayouts ? 'var(--card-border)' : 'var(--color-primary)', color: syncingPayouts ? 'var(--text)' : 'var(--color-primary-text)', border: `1px solid ${syncingPayouts ? 'var(--card-border)' : 'var(--color-primary)'}` }}
+              >
+                {syncingPayouts ? '⏳ Syncing…' : '💸 Sync payouts'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -342,7 +459,7 @@ export default function OrdersPanel() {
                 {/* Left: Order Info */}
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-default">Order #{o.id}</div>
-                  <div className="text-xs sm:text-sm text-muted mt-1">👤 {o.customer || 'Customer'}</div>
+                  <div className="text-xs sm:text-sm text-muted mt-1">👤 {o.username || 'Customer'}</div>
                 </div>
 
                 {/* Middle: Status Badge */}
@@ -352,13 +469,16 @@ export default function OrdersPanel() {
                   </span>
                 </div>
 
-                {/* Right: Amount & Date */}
-                <div className="flex flex-col items-end gap-1">
-                  {typeof o.total === 'number' && (
-                    <div className="text-sm sm:text-base font-bold text-default">
-                      ${o.total.toFixed(2)}
-                    </div>
-                  )}
+                {/* Right: Amount, Date & Actions */}
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex items-center gap-2">
+                    {typeof o.total === 'number' && (
+                      <div className="text-sm sm:text-base font-bold text-default">
+                        ${o.total.toFixed(2)}
+                      </div>
+                    )}
+                    <button onClick={() => viewOrder(o.id)} className="px-2 py-1 rounded bg-indigo-50 text-indigo-700 text-sm cursor-pointer">View</button>
+                  </div>
                   <div className="text-xs text-muted">
                     {o.updated_at ? new Date(o.updated_at).toLocaleDateString() : 'N/A'}
                   </div>
@@ -374,6 +494,95 @@ export default function OrdersPanel() {
             </div>
           ))}
         </div>
+
+        {/* Order Detail Modal */}
+        {selectedOrderDetail && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50" onClick={closeDetail}></div>
+            <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-lg p-6 max-w-3xl w-full z-10 mx-4">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Order #{selectedOrderDetail.id}</h3>
+                  <div className="text-sm text-muted">Status: {selectedOrderDetail.status || 'N/A'}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={closeDetail} className="btn-outline">Close</button>
+                </div>
+              </div>
+
+              {detailLoading && <div className="text-sm text-muted">Loading details…</div>}
+              {detailError && <div className="text-sm text-red-600">❌ {detailError}</div>}
+
+              {!detailLoading && !detailError && (
+                <div className="space-y-4">
+                  {/* Items */}
+                  <div>
+                    <div className="text-sm text-muted mb-2">Items</div>
+                    <div className="border rounded p-3 bg-surface">
+                      {(
+                        (selectedOrderDetail.items && Array.isArray(selectedOrderDetail.items) && selectedOrderDetail.items)
+                        || (selectedOrderDetail.line_items && Array.isArray(selectedOrderDetail.line_items) && selectedOrderDetail.line_items)
+                        || (selectedOrderDetail.products && Array.isArray(selectedOrderDetail.products) && selectedOrderDetail.products)
+                        || []
+                      ).length === 0 && <div className="text-sm text-muted">No item data available.</div>}
+
+                      {((selectedOrderDetail.items && Array.isArray(selectedOrderDetail.items) && selectedOrderDetail.items)
+                        || (selectedOrderDetail.line_items && Array.isArray(selectedOrderDetail.line_items) && selectedOrderDetail.line_items)
+                        || (selectedOrderDetail.products && Array.isArray(selectedOrderDetail.products) && selectedOrderDetail.products)
+                        || []).map((it: any, idx: number) => (
+                          <div key={idx} className="flex justify-between py-2 border-b last:border-b-0">
+                            <div className="min-w-0">
+                              <div className="font-medium">{it.title || it.name || it.product_name || it.product?.title || 'Product'}</div>
+                              <div className="text-xs text-muted">Qty: {it.qty ?? it.quantity ?? it.amount ?? 1}</div>
+                            </div>
+                            <div className="text-sm font-semibold">{typeof it.price_cents === 'number' ? `$${(it.price_cents / 100).toFixed(2)}` : it.price ? `$${Number(it.price).toFixed(2)}` : ''}</div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Totals and Shipping */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="border rounded p-3 bg-surface">
+                      <div className="text-sm text-muted">Totals</div>
+                      <div className="text-lg font-bold mt-2">{(selectedOrderDetail.amount_cents ? `$${(selectedOrderDetail.amount_cents / 100).toFixed(2)}` : (selectedOrderDetail.total ? `$${Number(selectedOrderDetail.total).toFixed(2)}` : '$0.00'))}</div>
+                    </div>
+                    <div className="border rounded p-3 bg-surface">
+                      <div className="text-sm text-muted">Shipping</div>
+                      <div className="text-sm">{selectedOrderDetail.shipping ? `${selectedOrderDetail.shipping.name || ''} • ${selectedOrderDetail.shipping.line1 || ''}` : 'N/A'}</div>
+                    </div>
+                  </div>
+
+                  {/* Customer information */}
+                  <div>
+                    <div className="text-sm text-muted mb-2">Customer</div>
+                    <div className="border rounded p-3 bg-surface flex items-start gap-4">
+                      {/* image/avatar */}
+                      {custInfo.avatar ? (
+                        <img src={custInfo.avatar} alt="Customer avatar" className="w-14 h-14 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-14 h-14 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">👤</div>
+                      )}
+                      <div>
+                        <div className="font-medium">{custInfo.username || 'Customer'}</div>
+                        <div className="text-sm text-muted">{custInfo.phone ? (<a href={`tel:${custInfo.phone}`} className="text-indigo-600">{custInfo.phone}</a>) : 'N/A'}</div>
+                        <div className="text-sm mt-2 text-muted">
+                          {(() => {
+                            const addr = extractCustomerInfo(selectedOrderDetail).address
+                            if (!addr) return 'No address available.'
+                            const parts = [addr.line1 || addr.address_line1 || addr.address1 || '', addr.line2 || addr.address_line2 || addr.address2 || '', addr.city || addr.town || addr.city_name || '', addr.postal_code || addr.zip || addr.postcode || '', addr.country || '']
+                            return parts.filter(Boolean).join(', ')
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
     </section>
   )

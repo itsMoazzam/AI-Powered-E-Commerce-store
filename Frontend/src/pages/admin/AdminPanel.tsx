@@ -4,7 +4,9 @@ import api from "../../lib/api"
 import { useTheme } from "../../theme/ThemeProvider"
 import ThreeDot from "../../components/threeDot"
 
-type Payment = { id: number; txn_id: string; amount: string; bank: string; ocr_summary: string; email_match: boolean; screenshot: string }
+// Payment payloads from the server can vary in shape. Keep this loose and
+// handle common fields defensively when rendering.
+type Payment = Record<string, any>
 type Review = { id: number; text: string; toxicity: number; plagiarism: number }
 type SystemStatus = { name: string; status: string }
 type Report = { id: number; title?: string; type?: string; details?: string; created_at?: string; created?: string; timestamp?: string }
@@ -372,15 +374,22 @@ export default function AdminPanel() {
                             </div>
                             <Section title="Recent Payments">
                                 <div className="space-y-2">
-                                    {payments.slice(0, 5).map((p) => (
-                                        <div key={p.id} className="flex justify-between text-xs md:text-sm p-2 md:p-3 border-b border-card">
-                                            <div className="min-w-0">
-                                                <div className="font-medium truncate">Txn #{p.txn_id}</div>
-                                                <div className="text-xs text-muted">{p.bank}</div>
+                                    {payments.slice(0, 5).map((p: Payment) => {
+                                        const buyer = p?.buyer ?? p?.buyer_profile ?? p?.user ?? p?.customer ?? null
+                                        const txn = p?.txn_id ?? p?.transaction_id ?? p?.id ?? ''
+                                        const bank = p?.bank ?? p?.gateway ?? p?.method ?? ''
+                                        const amount = p?.amount ?? p?.total ?? p?.value ?? ''
+                                        const name = (buyer?.username ?? buyer?.name ?? `${buyer?.first_name ?? ''} ${buyer?.last_name ?? ''}`.trim()) || 'Unknown'
+                                        return (
+                                            <div key={txn || Math.random()} className="flex justify-between text-xs md:text-sm p-2 md:p-3 border-b border-card">
+                                                <div className="min-w-0">
+                                                    <div className="font-medium truncate">{name} {txn ? `– #${txn}` : ''}</div>
+                                                    <div className="text-xs text-muted">{bank}</div>
+                                                </div>
+                                                <span className="font-semibold ml-2" style={{ color: primary }}>{amount}</span>
                                             </div>
-                                            <span className="font-semibold ml-2" style={{ color: primary }}>{p.amount}</span>
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             </Section>
                         </div>
@@ -389,21 +398,40 @@ export default function AdminPanel() {
                     {tab === "payments" && (
                         <Section title="Payments">
                             <div className="space-y-2 md:space-y-3">
-                                {payments.map((p) => (
-                                    <div key={p.id} className="p-3 md:p-4 border border-card rounded-lg bg-surface hover:border-blue-400 transition-all">
-                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-3">
-                                            <div className="min-w-0 flex-1">
-                                                <div className="font-medium text-sm md:text-base text-default">Txn #{p.txn_id} – {p.bank}</div>
-                                                <div className="text-xs text-muted mt-1">OCR: {p.ocr_summary} | Email: {p.email_match ? "✅" : "❌"}</div>
-                                            </div>
-                                            <div className="flex gap-1 md:gap-2 flex-wrap">
-                                                <a href={p.screenshot} target="_blank" rel="noreferrer" className="px-2 md:px-3 py-1 text-xs md:text-sm rounded-md font-medium text-white" style={{ background: primary }}>View</a>
-                                                <button className="px-2 md:px-3 py-1 text-xs md:text-sm rounded-md font-medium text-white bg-green-600 hover:bg-green-700">Approve</button>
-                                                <button className="px-2 md:px-3 py-1 text-xs md:text-sm rounded-md font-medium text-white bg-red-600 hover:bg-red-700">Reject</button>
+                                {payments.map((p: Payment) => {
+                                    const buyer = p?.buyer ?? p?.buyer_profile ?? p?.user ?? p?.customer ?? null
+                                    const username = (buyer?.username ?? buyer?.name ?? `${buyer?.first_name ?? ''} ${buyer?.last_name ?? ''}`.trim()) || 'Unknown'
+                                    const phone = buyer?.mobile ?? buyer?.phone ?? buyer?.phone_number ?? ''
+                                    const avatar = buyer?.profile_picture ?? buyer?.avatar ?? buyer?.picture ?? null
+                                    const amount = p?.amount ?? p?.total ?? p?.value ?? ''
+                                    const status = p?.status ?? p?.payment_status ?? p?.state ?? ''
+                                    const txn = p?.txn_id ?? p?.transaction_id ?? p?.id ?? ''
+                                    const receiptUrl = p?.screenshot ?? p?.receipt_url ?? p?.receipt ?? ''
+
+                                    return (
+                                        <div key={txn || Math.random()} className="p-3 md:p-4 border border-card rounded-lg bg-surface hover:border-blue-400 transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-zinc-800 overflow-hidden flex items-center justify-center text-sm font-medium text-default">
+                                                    {avatar ? <img src={avatar} alt={username} className="w-full h-full object-cover" /> : (username[0] || '?')}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="font-medium text-sm md:text-base text-default truncate">{username}</div>
+                                                    <div className="text-xs text-muted mt-0.5 truncate">{phone}</div>
+                                                    <div className="text-xs text-muted mt-1 truncate">Txn #{txn} {p?.bank ? `• ${p.bank}` : ''}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="font-semibold text-default" style={{ color: primary }}>{amount}</div>
+                                                    <div className="text-xs mt-1"><span className={`px-2 py-1 rounded-full text-xs font-medium ${status?.toLowerCase?.() === 'paid' ? 'bg-green-100 text-green-700' : status?.toLowerCase?.() === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-muted'}`}>{status || 'Unknown'}</span></div>
+                                                    <div className="flex gap-1 mt-2">
+                                                        {receiptUrl && <a href={receiptUrl} target="_blank" rel="noreferrer" className="px-2 md:px-3 py-1 text-xs md:text-sm rounded-md font-medium text-white" style={{ background: primary }}>View</a>}
+                                                        <button className="px-2 md:px-3 py-1 text-xs md:text-sm rounded-md font-medium text-white bg-green-600 hover:bg-green-700">Approve</button>
+                                                        <button className="px-2 md:px-3 py-1 text-xs md:text-sm rounded-md font-medium text-white bg-red-600 hover:bg-red-700">Reject</button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         </Section>
                     )}
